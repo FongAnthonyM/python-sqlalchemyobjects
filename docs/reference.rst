@@ -6,8 +6,8 @@ Reference
     :backlinks: none
 
 
-templatepackage.__main__
+sqlalchemyobjects.__main__
 --------------------
 
-.. automodule:: templatepackage.__main__
+.. automodule:: sqlalchemyobjects.__main__
    :members:
