@@ -12,7 +12,7 @@ __email__ = ""
 __copyright__ = "Copyright 2024, Anthony Fong"
 __license__ = "MIT"
 
-__version__ = "0.0.0"
+__version__ = "0.1.0"
 __status__ = " Planning"
 
 __all__ = [
