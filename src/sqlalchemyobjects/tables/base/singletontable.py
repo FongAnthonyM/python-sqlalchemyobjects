@@ -1,5 +1,5 @@
-"""basesingletontable.py
-
+"""singletontable.py
+Classes for a table with stores a single entry in an SQLAlchemy ORM model.
 """
 # Package Header #
 from ...header import *
@@ -21,13 +21,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Local Packages #
-from .basetable import BaseTable
+from .basetable import BaseTable, TableManifestation
 
 
 # Definitions #
 # Classes #
 class BaseSingletonTable(BaseTable):
-    """A base class for an SQLAlchemy ORM model table which stores single entry.
+    """A base class for a table with stores a single entry in an SQLAlchemy ORM model.
 
     Class Attributes:
         __tablename__: The name of the table.
@@ -191,3 +191,18 @@ class BaseSingletonTable(BaseTable):
                 (await session.execute(statement)).scalar().update(entry, **kwargs)
         else:
             (await session.execute(statement)).scalar().update(entry, **kwargs)
+
+
+class SingletonTableManifestation(TableManifestation):
+    """The manifestation of a SingletonTable.
+
+    Attributes:
+        _database: A weak reference to the SQAlchemy database to interface with.
+        table: The SQLAlchemy declarative table which this object act as the interface for.
+
+    Args:
+        table: The SQLAlchemy declarative table which this object act as the interface for.
+        database: The SQAlchemy database to interface with.
+        init: Determines if this object will construct.
+        **kwargs: Additional keyword arguments.
+    """

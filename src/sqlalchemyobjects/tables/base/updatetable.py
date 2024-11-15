@@ -1,8 +1,8 @@
 """basetable.py
-An abstract base class which outlines a table to be used in a SQLAlchemy ORM model.
+Classes for a table for tracking updates to in an SQLAlchemy ORM model.
 """
 # Package Header #
-from src.sqlalchemyobjects.header import *
+from ...header import *
 
 # Header #
 __author__ = __author__
@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.types import BigInteger
 
 # Local Packages #
-from src.sqlalchemyobjects.tables.base.basetable import BaseTable
+from .basetable import BaseTable, TableManifestation
 
 
 # Definitions #
@@ -158,3 +158,98 @@ class BaseUpdateTable(BaseTable):
         entry = super().as_entry()
         entry.update(update_id=self.update_id)
         return entry
+
+
+class UpdateTableManifestation(TableManifestation):
+    """The manifestation of an UpdateTable.
+
+    Attributes:
+        _database: A weak reference to the SQAlchemy database to interface with.
+        table: The SQLAlchemy declarative table which this object act as the interface for.
+
+    Args:
+        table: The SQLAlchemy declarative table which this object act as the interface for.
+        database: The SQAlchemy database to interface with.
+        init: Determines if this object will construct.
+        **kwargs: Additional keyword arguments.
+    """
+
+    # Instance Methods #
+    # Table
+    def get_last_update_id(self, session: Session | None = None) -> int | None:
+        """Gets the last update ID from the table.
+
+        Args:
+            session: The SQLAlchemy session to use for the query. Defaults to None.
+
+        Returns:
+            int | None: The last update ID.
+        """
+        if session is not None:
+            return self.table.get_last_update_id(session)
+        else:
+            with self.create_session() as session:
+                return self.table.get_last_update_id(session)
+
+    async def get_last_update_id_async(self, session: AsyncSession | None = None) -> int | None:
+        """Asynchronously gets the last update ID from the table.
+
+        Args:
+            session: The SQLAlchemy session to use for the query. Defaults to None.
+
+        Returns:
+            int | None: The last update ID.
+        """
+        if session is not None:
+            return await self.table.get_last_update_id_async(session)
+        else:
+            async with self.create_async_session() as session:
+                return await self.table.get_last_update_id_async(session)
+
+    def get_from_update(
+        self,
+        update_id: int,
+        session: Session | None = None,
+        inclusive: bool = True,
+        as_entries: bool = False,
+    ) -> Result | list[dict[str, Any]]:
+        """Gets entries from the table based on the update ID.
+
+        Args:
+            update_id: The update ID to filter entries.
+            session: The SQLAlchemy session to use for the query. Defaults to None.
+            inclusive: If True, includes the entry with the given update ID. Defaults to True.
+            as_entries: If True, returns a list of dictionaries representing the entries; otherwise, returns a Result.
+
+        Returns:
+            Result | list[dict[str, Any]]: The result of the query, either as a Result object or as a list of dictionaries.
+        """
+        if session is not None:
+            return self.table.get_from_update(session, update_id, inclusive, as_entries)
+        else:
+            with self.create_session() as session:
+                return self.table.get_from_update(session, update_id, inclusive, as_entries)
+
+    async def get_from_update_async(
+        self,
+        update_id: int,
+        session: AsyncSession | None = None,
+        inclusive: bool = True,
+        as_entries: bool = False,
+    ) -> Result | list[dict[str, Any]]:
+        """Asynchronously gets entries from the table based on the update ID.
+
+        Args:
+            update_id: The update ID to filter entries.
+            session: The SQLAlchemy session to use for the query. Defaults to None.
+            inclusive: If True, includes the entry with the given update ID. Defaults to True.
+            as_entries: If True, returns a list of dictionaries representing the entries; otherwise, returns a Result.
+
+        Returns:
+            Result | list[dict[str, Any]]: The result of the query, either as a Result object or as a list of dictionaries.
+        """
+        if session is not None:
+            return await self.table.get_from_update_async(session, update_id, inclusive, as_entries)
+        else:
+            async with self.create_async_session() as session:
+                return await self.table.get_from_update_async(session, update_id, inclusive, as_entries)

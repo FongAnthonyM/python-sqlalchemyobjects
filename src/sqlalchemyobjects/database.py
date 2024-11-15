@@ -1,8 +1,8 @@
-"""databasefile.py
-Manages the database file including creating, opening, and modifying the database.
+"""database.py
+Manages the database including creating, opening, and modifying the database.
 """
 # Package Header #
-from ..header import *
+from .header import *
 
 # Header #
 __author__ = __author__
@@ -15,24 +15,27 @@ __email__ = __email__
 # Standard Libraries #
 from asyncio import run
 import pathlib
+from pathlib import Path
 from typing import Any
 
 # Third-Party Packages #
-from baseobjects import BaseComposite
+from baseobjects import BaseObject
 from sqlalchemy import create_engine, Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine, async_sessionmaker
 
 # Local Packages #
+from .tables import TableManifestation
 
 
 # Definitions #
 # Classes #
-class DatabaseFile(BaseComposite):
-    """Manages the database file including creating, opening, and modifying the database.
+class Database(BaseObject):
+    """Manages the database including creating, opening, and modifying the database.
 
     Attributes:
         _path: The file path to the database.
+        url: The URL to the database.
         _engine: The SQLAlchemy engine for synchronous operations.
         _async_engine: The SQLAlchemy engine for asynchronous operations.
         session_maker_kwargs: Keyword arguments for the synchronous session maker.
@@ -40,22 +43,21 @@ class DatabaseFile(BaseComposite):
         async_session_maker_kwargs: Keyword arguments for the asynchronous session maker.
         _async_session_maker: Factory for creating asynchronous sessions.
         schema: The database schema class.
+        table_map: A map which outlines which table are within this database.
         tables: A dictionary of tables within this database.
 
     Args:
-        path: The path to the file.
+        path: The path to the database file.
         schema: The database schema class.
-        tables: A dictionary of tables within this database.
-        open_: Whether to open the file.
-        create: Whether to create the file.
-        component_kwargs: Keyword arguments for creating the components.
-        component_types: Component classes and their keyword arguments to instantiate.
-        components: Components to add.
+        table_map: A map which outlines which table are within this database.
+        open_: Whether to open the database. Defaults to False.
+        create: Whether to create the database. Defaults to False.
         init: Whether to initialize the object.
         **kwargs: Additional keyword arguments.
     """
     # Attributes #
-    _path: pathlib.Path | None = None
+    _path: Path | None = None
+    url: str | None = None
 
     _engine: Engine | None = None
     _async_engine: AsyncEngine | None = None
@@ -67,24 +69,25 @@ class DatabaseFile(BaseComposite):
     _async_session_maker: async_sessionmaker | None = None
 
     schema: type[DeclarativeBase] | None = None
-    tables: dict[str, type[DeclarativeBase]] = {}
+    table_map: dict[str, tuple[type[TableManifestation], type[DeclarativeBase], dict[str, Any]]] = {}
+    tables: dict[str, TableManifestation]
 
     # Properties #
     @property
-    def path(self) -> pathlib.Path:
-        """The path to the file.
+    def path(self) -> Path:
+        """The path to the database file.
 
         Returns:
-            pathlib.Path: The path to the file.
+            pathlib.Path: The path to the database file.
         """
         return self._path
 
     @path.setter
-    def path(self, value: str | pathlib.Path) -> None:
-        """Sets the path to the file.
+    def path(self, value: str | Path) -> None:
+        """Sets the path to the database file.
 
         Args:
-            value: The new path to the file.
+            value: The new path to the database file.
         """
         if isinstance(value, pathlib.Path) or value is None:
             self._path = value
@@ -93,10 +96,10 @@ class DatabaseFile(BaseComposite):
 
     @property
     def is_open(self) -> bool:
-        """Checks if the file is open.
+        """Checks if the database is open.
 
         Returns:
-            bool: True if the file is open, False otherwise.
+            bool: True if the database is open, False otherwise.
         """
         return self._engine is not None and self._async_engine is not None
 
@@ -104,20 +107,17 @@ class DatabaseFile(BaseComposite):
     # Construction/Destruction
     def __init__(
         self,
-        path: str | pathlib.Path | None = None,
+        path: str | Path | None = None,
         schema: type[DeclarativeBase] | None = None,
-        tables: dict[str, type[DeclarativeBase]] | None = None,
+        table_map: dict[str, tuple[type[TableManifestation], type[DeclarativeBase], dict[str, Any]]] | None = None,
         open_: bool = False,
         create: bool = False,
         *,
-        component_kwargs: dict[str, dict[str, Any]] | None = None,
-        component_types: dict[str, tuple[type, dict[str, Any]]] | None = None,
-        components: dict[str, Any] | None = None,
         init: bool = True,
         **kwargs,
     ) -> None:
         # New Attributes #
-        self.tables = self.tables.copy()
+        self.tables = {}
         self.session_maker_kwargs = self.session_maker_kwargs.copy()
         self.async_session_maker_kwargs = self.async_session_maker_kwargs.copy()
 
@@ -129,12 +129,9 @@ class DatabaseFile(BaseComposite):
             self.construct(
                 path,
                 schema,
-                tables,
+                table_map,
                 open_,
                 create,
-                component_kwargs=component_kwargs,
-                component_types=component_types,
-                components=components,
                 **kwargs,
             )
 
@@ -169,26 +166,19 @@ class DatabaseFile(BaseComposite):
         self,
         path: str | pathlib.Path | None = None,
         schema: type[DeclarativeBase] | None = None,
-        tables: dict[str, type[DeclarativeBase]] | None = None,
+        table_map: dict[str, tuple[type[TableManifestation], type[DeclarativeBase], dict[str, Any]]] | None = None,
         open_: bool = False,
         create: bool = False,
-        *,
-        component_kwargs: dict[str, dict[str, Any]] | None = None,
-        component_types: dict[str, tuple[type, dict[str, Any]]] | None = None,
-        components: dict[str, Any] | None = None,
         **kwargs,
     ) -> None:
-        """Constructs the DatabaseFile object.
+        """Constructs the Database object.
 
         Args:
-            path: The path to the file.
+            path: The path to the database file.
             schema: The database schema class.
-            tables: A dictionary of table within this database.
-            open_: Whether to open the file.
-            create: Whether to create the file.
-            component_kwargs: Keyword arguments for creating the components.
-            component_types: Component classes and their keyword arguments to instantiate.
-            components: Components to add.
+            table_map: A map which outlines which table are within this database.
+            open_: Whether to open the database. Defaults to False.
+            create: Whether to create the database. Defaults to False.
             **kwargs: Additional keyword arguments.
         """
         if path is not None:
@@ -197,25 +187,47 @@ class DatabaseFile(BaseComposite):
         if schema is not None:
             self.schema = schema
 
-        if tables is not None:
-            self.tables.clear()
-            self.tables.update(tables)
+        if table_map is not None:
+            self.table_map = table_map
+
+        self.manifest_tables()
 
         if create:
-            self.create_file()
+            self.create_database()
             self.close()
 
         if open_:
             self.open(**kwargs)
 
-        super().construct(component_kwargs=component_kwargs, component_types=component_types, components=components)
+        super().construct()
 
-    # File
-    def create_file(self, path: str | pathlib.Path | None = None, **kwargs) -> None:
-        """Creates the database file.
+    # Engine
+    def create_engine(self, path: Path | None = None, url: str | None = None, **kwargs) -> None:
+        """Creates the SQLAlchemy engine.
 
         Args:
-            path: The path to the file.
+            path: The path to the database.
+            url: The URL to the database.
+            **kwargs: Additional keyword arguments.
+        """
+        if url is None:
+            path_str = path.as_posix() if path else self._path.as_posix()
+            location = f"sqlite:///{path_str}"
+            location_async = f"sqlite+aiosqlite:///{path_str}"
+        else:
+            location = url
+            location_async = url.replace("sqlite", "sqlite+aiosqlite")
+
+        self._engine = create_engine(location, **kwargs)
+        self._async_engine = create_async_engine(location_async, **kwargs)
+
+
+    # Database
+    def create_database(self, path: str | pathlib.Path | None = None, **kwargs) -> None:
+        """Creates the database.
+
+        Args:
+            path: The path to the database.
             **kwargs: Additional keyword arguments.
         """
         if path is not None:
@@ -226,11 +238,11 @@ class DatabaseFile(BaseComposite):
 
         self.schema.metadata.create_all(self._engine)
 
-    async def create_file_async(self, path: str | pathlib.Path | None = None, **kwargs) -> None:
-        """Asynchronously creates the database file.
+    async def create_database_async(self, path: str | pathlib.Path | None = None, **kwargs) -> None:
+        """Asynchronously creates the database.
 
         Args:
-            path: The path to the file.
+            path: The path to the database.
             **kwargs: Additional keyword arguments.
         """
         if path is not None:
@@ -242,14 +254,14 @@ class DatabaseFile(BaseComposite):
         async with self._async_engine.begin() as conn:
             await conn.run_sync(self.schema.metadata.create_all)
 
-    def open(self, **kwargs: Any) -> "DatabaseFile":
-        """Opens the database file.
+    def open(self, **kwargs: Any) -> "Database":
+        """Opens the database.
 
         Args:
             **kwargs: Additional keyword arguments.
 
         Returns:
-            DatabaseFile: The opened database file.
+            Database: The opened database.
         """
         self.create_engine(**kwargs)
         self.build_session_maker()
@@ -257,10 +269,10 @@ class DatabaseFile(BaseComposite):
         return self
 
     def close(self) -> bool:
-        """Closes the database file.
+        """Closes the database.
 
         Returns:
-            bool: True if the file is closed, False otherwise.
+            bool: True if the database is closed, False otherwise.
         """
         if self._engine is not None:
             self._engine.dispose()
@@ -273,10 +285,10 @@ class DatabaseFile(BaseComposite):
         return self._engine is None
 
     async def close_async(self) -> bool:
-        """Asynchronously closes the database file.
+        """Asynchronously closes the database.
 
         Returns:
-            bool: True if the file is closed, False otherwise.
+            bool: True if the database is closed, False otherwise.
         """
         if self._engine is not None:
             self._engine.dispose()
@@ -286,16 +298,6 @@ class DatabaseFile(BaseComposite):
             self._async_engine = None
         self._async_session_maker = None
         return self._engine is None
-
-    # Engine
-    def create_engine(self, **kwargs) -> None:
-        """Creates the SQLAlchemy engine.
-
-        Args:
-            **kwargs: Additional keyword arguments.
-        """
-        self._engine = create_engine(f"sqlite:///{self._path.as_posix()}", **kwargs)
-        self._async_engine = create_async_engine(f"sqlite+aiosqlite:///{self._path.as_posix()}", **kwargs)
 
     # Session
     def build_session_maker(self, **kwargs) -> sessionmaker:
@@ -333,10 +335,10 @@ class DatabaseFile(BaseComposite):
             Session: A new synchronous session.
 
         Raises:
-            IOError: If the file is not open.
+            IOError: If the database is not open.
         """
         if not self.is_open:
-            raise IOError("File not open")
+            raise IOError("Database not open")
         return Session(self._engine, *args, **kwargs) if args or kwargs else self._session_maker()
 
     def create_async_session(self, *args: Any, **kwargs: Any) -> AsyncSession:
@@ -350,8 +352,33 @@ class DatabaseFile(BaseComposite):
             AsyncSession: A new asynchronous session.
 
         Raises:
-            IOError: If the file is not open.
+            IOError: If the database is not open.
         """
         if not self.is_open:
-            raise IOError("File not open")
+            raise IOError("Database not open")
         return AsyncSession(self._async_engine, *args, **kwargs) if args or kwargs else self._async_session_maker()
+
+    # Tables
+    def manifest_tables(
+        self,
+        table_map: dict[str, tuple[type[TableManifestation], type[DeclarativeBase], dict[str, Any]]] | None = None,
+    ) -> None:
+        """Manifests the table from the table map.
+
+        Args:
+            table_map: The map of tables to manifest the table from. If None, uses the default table map.
+        """
+        if table_map is None:
+            table_map = self.table_map
+        for name, (table_type, table_base, kwargs) in table_map.items():
+            self.tables[name] = table_type(table=table_base, database=self, **kwargs)
+
+    def build_tables(self) -> None:
+        """Builds the tables"""
+        for table in self.tables.values():
+            table.build()
+
+    def load_tables(self) -> None:
+        """Loads the tables."""
+        for table in self.tables.values():
+            table.build()

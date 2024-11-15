@@ -1,8 +1,8 @@
 """basetable.py
-An abstract base class which outlines a table to be used in a SQLAlchemy ORM model.
+Classes for outlining base class tables to be used in a SQLAlchemy ORM model.
 """
 # Package Header #
-from src.sqlalchemyobjects.header import *
+from ...header import *
 
 # Header #
 __author__ = __author__
@@ -14,12 +14,14 @@ __email__ = __email__
 # Imports #
 # Standard Libraries #
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, Optional
 import uuid
+from weakref import ref
 
 # Third-Party Packages #
+from baseobjects import BaseObject
 from sqlalchemy import Uuid, Result, select, lambda_stmt
-from sqlalchemy.orm import mapped_column, Session
+from sqlalchemy.orm import mapped_column, Session, DeclarativeBase
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Local Packages #
@@ -28,7 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # Definitions #
 # Classes #
 class BaseTable:
-    """A base class which outlines a table to be used in a SQLAlchemy ORM model.
+    """A base class for a table to be used in a SQLAlchemy ORM model.
 
     This class and its subclasses should be multi-inherited along with SQLAlchemy's ContentsFileSchema or
     ContentsFileAsyncSchema to create a mixin class which will properly implement table in SQLite. Mainly, this class
@@ -438,3 +440,358 @@ class BaseTable:
             dict[str, Any]: A dictionary representation of the entry.
         """
         return {"id": self.id}
+
+
+class TableManifestation(BaseObject):
+    """This object acts as the manifestation (an interface) of a table implemented in an SQLAlchemy database.
+
+    Attributes:
+        _database: A weak reference to the SQAlchemy database to interface with.
+        table: The SQLAlchemy declarative table which this object act as the interface for.
+
+    Args:
+        table: The SQLAlchemy declarative table which this object act as the interface for.
+        database: The SQAlchemy database to interface with.
+        init: Determines if this object will construct.
+        **kwargs: Additional keyword arguments.
+    """
+
+    # Attributes #
+    _database: ref["BaseDatabase"] | None = None
+    table: type[DeclarativeBase] | None = None
+
+    # Properties #
+    @property
+    def database(self) -> Optional["BaseDatabase"]:
+        """The database object associated with the table manifestation."""
+        return None if self._database is None else self._database()
+
+    @database.setter
+    def database(self, value: Any) -> None:
+        """Sets the database object associated with the table manifestation."""
+        self._database = ref(value)
+
+    # Magic Methods #
+    # Construction/Destruction
+    def __init__(
+        self,
+        table: type[DeclarativeBase] | None = None,
+        database: Optional["BaseDatabase"] = None,
+        init: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        # Parent Attributes #
+        super().__init__(init=False)
+
+        # Object Construction #
+        if init:
+            self.construct(table, database, **kwargs)
+
+    # Instance Methods #
+    # Construction/Destruction
+    def construct(
+        self,
+        table: type[DeclarativeBase] | None = None,
+        database: Optional["BaseDatabase"] = None,
+        **kwargs: Any,
+    ) -> None:
+        """Constructs this object.
+
+        Args:
+            table: The table class.
+            database: A reference to a BaseDatabase instance.
+            **kwargs: Additional keyword arguments to pass to the superclass construct method.
+        """
+        if database is not None:
+            self._database = ref(database)
+
+        if table is not None:
+            self.table = table
+
+        super().construct(**kwargs)
+
+    def build(self, *args: Any, **kwargs: Any) -> None:
+        """Builds the table."""
+
+    def load(self, *args: Any, **kwargs: Any) -> None:
+        """Load the table."""
+
+    # Session
+    def create_session(self, *args: Any, **kwargs: Any) -> Session:
+        """Creates a new SQLAlchemy session.
+
+        Args:
+            *args: Positional arguments for session creation.
+            **kwargs: Keyword arguments for session creation.
+
+        Returns:
+            Session: A new SQLAlchemy session.
+        """
+        return self._database().create_session(*args, **kwargs)
+
+    def create_async_session(self, *args: Any, **kwargs: Any) -> AsyncSession:
+        """Creates a new asynchronous SQLAlchemy session.
+
+        Args:
+            *args : Positional arguments for session creation.
+            **kwargs: Keyword arguments for session creation.
+
+        Returns:
+            AsyncSession: A new asynchronous SQLAlchemy session.
+        """
+        return self._database().create_async_session(*args, **kwargs)
+
+    # Table
+    def get_all(self, session: Session | None = None, as_entries: bool = False) -> Result | list[dict[str, Any]]:
+        """Fetches all entries from the table.
+
+        Args:
+            session: The SQLAlchemy session to use for the query.
+            as_entries: If True, returns a list of dictionaries representing the entries; otherwise, returns a Result.
+
+        Returns:
+            Result | list[dict[str, Any]]: The result of the query, either as a Result object or as a list of dictionaries.
+        """
+        if session is not None:
+            return self.table.get_all(session, as_entries=as_entries)
+        else:
+            with self.create_session() as session:
+                return self.table.get_all(session, as_entries=as_entries)
+
+    async def get_all_async(
+        self,
+        session: AsyncSession | None = None,
+        as_entries: bool = False,
+    ) -> Result | list[dict[str, Any]]:
+        """Asynchronously fetches all entries from the table.
+
+        Args:
+            session: The SQLAlchemy session to use for the query.
+            as_entries: If True, returns a list of dictionaries representing the entries; otherwise, returns a Result.
+
+        Returns:
+            Result | list[dict[str, Any]]: The result of the query, either as a Result object or as a list of dictionaries.
+        """
+        if session is not None:
+            return await self.table.get_all_async(session, as_entries=as_entries)
+        else:
+            async with self.create_async_session() as session:
+                return await self.table.get_all_async(session, as_entries=as_entries)
+
+    def insert(
+        self,
+        item: Any = None,
+        entry: dict[str, Any] | None = None,
+        session: Session | None = None,
+        as_entry: bool = False,
+        begin: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        """Inserts an item into the table.
+
+        Args:
+            item: The item to insert. Defaults to None.
+            entry: A dictionary representing the entry to insert. Defaults to None.
+            session: The SQLAlchemy session to apply the modification. Defaults to None.
+            as_entry: If True, creates the item from the entry dictionary. Defaults to False.
+            begin: If True, begins a transaction for the operation. Defaults to False.
+            **kwargs: Additional keyword arguments for the entry.
+        """
+        if session is not None:
+            self.table.insert(session, item, entry, as_entry, begin, **kwargs)
+        else:
+            with self.create_session() as session:
+                self.table.insert(session, item, entry, as_entry, begin, **kwargs)
+
+    async def insert_async(
+        self,
+        item: Any = None,
+        entry: dict[str, Any] | None = None,
+        session: AsyncSession | None = None,
+        as_entry: bool = False,
+        begin: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        """Asynchronously inserts an item into the table.
+
+        Args:
+            item: The item to insert. Defaults to None.
+            entry: A dictionary representing the entry to insert. Defaults to None.
+            session: The SQLAlchemy session to apply the modification. Defaults to None.
+            as_entry: If True, creates the item from the entry dictionary. Defaults to False.
+            begin: If True, begins a transaction for the operation. Defaults to False.
+            **kwargs: Additional keyword arguments for the entry.
+        """
+        if session is not None:
+            await self.table.insert_async(session, item, entry, as_entry, begin, **kwargs)
+        else:
+            async with self.create_async_session() as session:
+                await self.table.insert_async(session, item, entry, as_entry, begin, **kwargs)
+
+    def insert_all(
+        self,
+        items: Iterable[Any] = (),
+        session: Session | None = None,
+        as_entries: bool = False,
+        begin: bool = False,
+    ) -> None:
+        """Inserts multiple items into the table.
+
+        Args:
+            items: The items to insert. Defaults to an empty iterable.
+            session: The SQLAlchemy session to apply the modification. Defaults to None.
+            as_entries: If True, creates the items from the entry dictionaries. Defaults to False.
+            begin: If True, begins a transaction for the operation. Defaults to False.
+        """
+        if session is not None:
+            self.table.insert_all(session, items, as_entries, begin)
+        else:
+            with self.create_session() as session:
+                self.table.insert_all(session, items, as_entries, begin)
+
+    async def insert_all_async(
+        self,
+        items: Iterable[Any] = (),
+        session: AsyncSession | None = None,
+        as_entries: bool = False,
+        begin: bool = False,
+    ) -> None:
+        """Asynchronously inserts multiple items into the table.
+
+        Args:
+            items: The items to insert. Defaults to an empty iterable.
+            session: The SQLAlchemy session to apply the modification. Defaults to None.
+            as_entries: If True, creates the items from the entry dictionaries. Defaults to False.
+            begin: If True, begins a transaction for the operation. Defaults to False.
+        """
+        if session is not None:
+            await self.table.insert_all_async(session, items, as_entries, begin)
+        else:
+            async with self.create_async_session() as session:
+                await self.table.insert_all_async(session, items, as_entries, begin)
+
+    def update_entry(
+        self,
+        entry: dict[str, Any] | None = None,
+        session: Session | None = None,
+        key: str = "id_",
+        begin: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        """Updates an entry in the table.
+
+        Args:
+            entry: A dictionary representing the entry to update. Defaults to None.
+            session: The SQLAlchemy session to apply the modification. Defaults to None.
+            key: The key to identify the entry. Defaults to "id_".
+            begin: If True, begins a transaction for the operation. Defaults to False.
+            **kwargs: Additional keyword arguments for the entry.
+        """
+        if session is not None:
+            self.table.update_entry(session, entry, key, begin, **kwargs)
+        else:
+            with self.create_session() as session:
+                self.table.update_entry(session, entry, key, begin, **kwargs)
+
+    async def update_entry_async(
+        self,
+        entry: dict[str, Any] | None = None,
+        session: AsyncSession | None = None,
+        key: str = "id_",
+        begin: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        """Asynchronously updates an entry in the table.
+
+        Args:
+            entry: A dictionary representing the entry to update. Defaults to None.
+            session: The SQLAlchemy session to apply the modification. Defaults to None.
+            key: The key to identify the entry. Defaults to "id_".
+            begin: If True, begins a transaction for the operation. Defaults to False.
+            **kwargs: Additional keyword arguments for the entry.
+        """
+        if session is not None:
+            await self.table.update_entry_async(session, entry, key, begin, **kwargs)
+        else:
+            async with self.create_async_session() as session:
+                await self.table.update_entry_async(session, entry, key, begin, **kwargs)
+
+    def update_entries(
+        self,
+        entries: Iterable[dict[str, Any]] | None = None,
+        session: Session | None = None,
+        key: str = "id_",
+        begin: bool = False,
+    ) -> None:
+        """Updates multiple entries in the table.
+
+        Args:
+            entries: An iterable of dictionaries representing the entries to update. Defaults to None.
+            session: The SQLAlchemy session to apply the modification. Defaults to None.
+            key: The key to identify the entries. Defaults to "id_".
+            begin: If True, begins a transaction for the operation. Defaults to False.
+        """
+        if session is not None:
+            self.table.update_entries(session, entries, key, begin)
+        else:
+            with self.create_session() as session:
+                self.table.update_entries(session, entries, key, begin)
+
+    async def update_entries_async(
+        self,
+        entries: Iterable[dict[str, Any]] | None = None,
+        session: AsyncSession | None = None,
+        key: str = "id_",
+        begin: bool = False,
+    ) -> None:
+        """Asynchronously updates multiple entries in the table.
+
+        Args:
+            entries: An iterable of dictionaries representing the entries to update. Defaults to None.
+            session: The SQLAlchemy session to apply the modification. Defaults to None.
+            key: The key to identify the entries. Defaults to "id_".
+            begin: If True, begins a transaction for the operation. Defaults to False.
+        """
+        if session is not None:
+            await self.table.update_entries_async(session, entries, key, begin)
+        else:
+            async with self.create_async_session() as session:
+                await self.table.update_entries_async(session, entries, key, begin)
+
+    def delete_item(
+        self,
+        item: BaseTable,
+        session: Session | None = None,
+        begin: bool = False,
+    ) -> None:
+        """Deletes an item from the table.
+
+        Args:
+            item: The item to delete.
+            session: The SQLAlchemy session to apply the modification. Defaults to None.
+            begin: If True, begins a transaction for the operation. Defaults to False.
+        """
+        if session is not None:
+            self.table.delete_item(session, item, begin)
+        else:
+            with self.create_session() as session:
+                self.table.delete_item(session, item, begin)
+
+    async def delete_item_async(
+        self,
+        item: BaseTable,
+        session: AsyncSession | None = None,
+        begin: bool = False,
+    ) -> None:
+        """Asynchronously deletes an item from the table.
+
+        Args:
+            item: The item to delete.
+            session: The SQLAlchemy session to apply the modification. Defaults to None.
+            begin: If True, begins a transaction for the operation. Defaults to False.
+        """
+        if session is not None:
+            await self.table.delete_item_async(session, item, begin)
+        else:
+            async with self.create_async_session() as session:
+                await self.table.delete_item_async(session, item, begin)

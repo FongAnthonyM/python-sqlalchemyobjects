@@ -13,7 +13,7 @@ __email__ = __email__
 
 # Imports #
 # Local Packages #
-from .basetable import BaseTable
-from .baseupdatetable import BaseUpdateTable
-from .basesingletontable import BaseSingletonTable
-from .basemetainformationtable import BaseMetaInformationTable
+from .basetable import BaseTable, TableManifestation
+from .updatetable import BaseUpdateTable, UpdateTableManifestation
+from .singletontable import BaseSingletonTable, SingletonTableManifestation
+from .metainformationtable import BaseMetaInformationTable, MetaInformationTableManifestation
