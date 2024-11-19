@@ -221,7 +221,6 @@ class Database(BaseObject):
         self._engine = create_engine(location, **kwargs)
         self._async_engine = create_async_engine(location_async, **kwargs)
 
-
     # Database
     def create_database(self, path: str | pathlib.Path | None = None, **kwargs) -> None:
         """Creates the database.

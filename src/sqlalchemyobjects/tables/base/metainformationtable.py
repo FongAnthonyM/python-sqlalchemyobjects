@@ -224,7 +224,8 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
             init_info: Initial meta-information.
             **kwargs: Additional keyword arguments.
         """
-        self._meta_information.update(init_info)
+        if init_info is not None:
+            self._meta_information.update(init_info)
 
         super().construct(composite, table_name, **kwargs)
 
