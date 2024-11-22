@@ -21,13 +21,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Local Packages #
-from .basetable import BaseTable, TableManifestation
+from .basetable import BaseTableSchema, TableManifestation
 
 
 # Definitions #
 # Classes #
-class BaseSingletonTable(BaseTable):
-    """A base class for a table with stores a single entry in an SQLAlchemy ORM model.
+class BaseSingletonTableSchema(BaseTableSchema):
+    """A schema for a table with stores a single entry in an SQLAlchemy ORM model.
 
     Class Attributes:
         __tablename__: The name of the table.
@@ -112,7 +112,7 @@ class BaseSingletonTable(BaseTable):
         cls,
         session: Session,
         as_entry: bool = True,
-    ) -> Union[dict[str, Any], "BaseSingletonTable"]:
+    ) -> Union[dict[str, Any], "BaseSingletonTableSchema"]:
         """Retrieves the entry from the table.
 
         Args:
@@ -120,7 +120,7 @@ class BaseSingletonTable(BaseTable):
             as_entry: If True, returns the entry as a dictionary; otherwise, returns the table object. Defaults to True.
 
         Returns:
-            Union[dict[str, Any], BaseSingletonTable]: The meta-information entry, either as a dictionary or as a table object.
+            Union[dict[str, Any], BaseSingletonTableSchema]: The meta-information entry, either as a dictionary or as a table object.
         """
         result = session.execute(lambda_stmt(lambda: select(cls))).scalar()
         return (result.as_entry() if as_entry else result) if result is not None else {}
@@ -130,7 +130,7 @@ class BaseSingletonTable(BaseTable):
         cls,
         session: AsyncSession,
         as_entry: bool = True,
-    ) -> Union[dict[str, Any], "BaseSingletonTable"]:
+    ) -> Union[dict[str, Any], "BaseSingletonTableSchema"]:
         """Asynchronously retrieves the single entry from the table.
 
         Args:
@@ -138,7 +138,7 @@ class BaseSingletonTable(BaseTable):
             as_entry: If True, returns the entry as a dictionary; otherwise, returns the table object. Defaults to True.
 
         Returns:
-            Union[dict[str, Any], BaseSingletonTable]: The meta-information entry, either as a dictionary or as a table object.
+            Union[dict[str, Any], BaseSingletonTableSchema]: The meta-information entry, either as a dictionary or as a table object.
         """
         result = (await session.execute(lambda_stmt(lambda: select(cls)))).scalar()
         return (result.as_entry() if as_entry else result) if result is not None else {}
@@ -198,10 +198,10 @@ class SingletonTableManifestation(TableManifestation):
 
     Attributes:
         _database: A weak reference to the SQAlchemy database to interface with.
-        table: The SQLAlchemy declarative table which this object act as the interface for.
+        table_schema: The SQLAlchemy declarative table which this object act as the interface for.
 
     Args:
-        table: The SQLAlchemy declarative table which this object act as the interface for.
+        table_schema: The SQLAlchemy declarative table which this object act as the interface for.
         database: The SQAlchemy database to interface with.
         init: Determines if this object will construct.
         **kwargs: Additional keyword arguments.

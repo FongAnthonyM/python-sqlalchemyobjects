@@ -29,8 +29,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 # Definitions #
 # Classes #
-class BaseTable:
-    """A base class for a table to be used in a SQLAlchemy ORM model.
+class BaseTableSchema:
+    """A base class for a table schema to be used in a SQLAlchemy ORM model.
 
     This class and its subclasses should be multi-inherited along with SQLAlchemy's ContentsFileSchema or
     ContentsFileAsyncSchema to create a mixin class which will properly implement table in SQLite. Mainly, this class
@@ -450,7 +450,7 @@ class TableManifestation(BaseObject):
         table: The SQLAlchemy declarative table which this object act as the interface for.
 
     Args:
-        table: The SQLAlchemy declarative table which this object act as the interface for.
+        table_schema: The SQLAlchemy declarative table which this object act as the interface for.
         database: The SQAlchemy database to interface with.
         init: Determines if this object will construct.
         **kwargs: Additional keyword arguments.
@@ -458,7 +458,7 @@ class TableManifestation(BaseObject):
 
     # Attributes #
     _database: ref["BaseDatabase"] | None = None
-    table: type[DeclarativeBase] | None = None
+    table_schema: type[DeclarativeBase] | None = None
 
     # Properties #
     @property
@@ -468,14 +468,14 @@ class TableManifestation(BaseObject):
 
     @database.setter
     def database(self, value: Any) -> None:
-        """Sets the database object associated with the table manifestation."""
+        """Sets the database object associated with the table_schema manifestation."""
         self._database = ref(value)
 
     # Magic Methods #
     # Construction/Destruction
     def __init__(
         self,
-        table: type[DeclarativeBase] | None = None,
+        table_schema: type[DeclarativeBase] | None = None,
         database: Optional["BaseDatabase"] = None,
         init: bool = True,
         **kwargs: Any,
@@ -485,7 +485,7 @@ class TableManifestation(BaseObject):
 
         # Object Construction #
         if init:
-            self.construct(table, database, **kwargs)
+            self.construct(table_schema, database, **kwargs)
 
     # Pickling
     def __getstate__(self) -> dict[str, Any]:
@@ -502,22 +502,22 @@ class TableManifestation(BaseObject):
     # Construction/Destruction
     def construct(
         self,
-        table: type[DeclarativeBase] | None = None,
+        table_schema: type[DeclarativeBase] | None = None,
         database: Optional["BaseDatabase"] = None,
         **kwargs: Any,
     ) -> None:
         """Constructs this object.
 
         Args:
-            table: The table class.
+            table_schema: The SQLAlchemy declarative table which this object act as the interface for.
             database: A reference to a BaseDatabase instance.
             **kwargs: Additional keyword arguments to pass to the superclass construct method.
         """
         if database is not None:
             self._database = ref(database)
 
-        if table is not None:
-            self.table = table
+        if table_schema is not None:
+            self.table_schema = table_schema
 
         super().construct(**kwargs)
 
@@ -564,10 +564,10 @@ class TableManifestation(BaseObject):
             Result | list[dict[str, Any]]: The result of the query, either as a Result object or as a list of dictionaries.
         """
         if session is not None:
-            return self.table.get_all(session, as_entries=as_entries)
+            return self.table_schema.get_all(session, as_entries=as_entries)
         else:
             with self.create_session() as session:
-                return self.table.get_all(session, as_entries=as_entries)
+                return self.table_schema.get_all(session, as_entries=as_entries)
 
     async def get_all_async(
         self,
@@ -584,10 +584,10 @@ class TableManifestation(BaseObject):
             Result | list[dict[str, Any]]: The result of the query, either as a Result object or as a list of dictionaries.
         """
         if session is not None:
-            return await self.table.get_all_async(session, as_entries=as_entries)
+            return await self.table_schema.get_all_async(session, as_entries=as_entries)
         else:
             async with self.create_async_session() as session:
-                return await self.table.get_all_async(session, as_entries=as_entries)
+                return await self.table_schema.get_all_async(session, as_entries=as_entries)
 
     def insert(
         self,
@@ -609,10 +609,10 @@ class TableManifestation(BaseObject):
             **kwargs: Additional keyword arguments for the entry.
         """
         if session is not None:
-            self.table.insert(session, item, entry, as_entry, begin, **kwargs)
+            self.table_schema.insert(session, item, entry, as_entry, begin, **kwargs)
         else:
             with self.create_session() as session:
-                self.table.insert(session, item, entry, as_entry, begin, **kwargs)
+                self.table_schema.insert(session, item, entry, as_entry, begin, **kwargs)
 
     async def insert_async(
         self,
@@ -634,10 +634,10 @@ class TableManifestation(BaseObject):
             **kwargs: Additional keyword arguments for the entry.
         """
         if session is not None:
-            await self.table.insert_async(session, item, entry, as_entry, begin, **kwargs)
+            await self.table_schema.insert_async(session, item, entry, as_entry, begin, **kwargs)
         else:
             async with self.create_async_session() as session:
-                await self.table.insert_async(session, item, entry, as_entry, begin, **kwargs)
+                await self.table_schema.insert_async(session, item, entry, as_entry, begin, **kwargs)
 
     def insert_all(
         self,
@@ -655,10 +655,10 @@ class TableManifestation(BaseObject):
             begin: If True, begins a transaction for the operation. Defaults to False.
         """
         if session is not None:
-            self.table.insert_all(session, items, as_entries, begin)
+            self.table_schema.insert_all(session, items, as_entries, begin)
         else:
             with self.create_session() as session:
-                self.table.insert_all(session, items, as_entries, begin)
+                self.table_schema.insert_all(session, items, as_entries, begin)
 
     async def insert_all_async(
         self,
@@ -676,10 +676,10 @@ class TableManifestation(BaseObject):
             begin: If True, begins a transaction for the operation. Defaults to False.
         """
         if session is not None:
-            await self.table.insert_all_async(session, items, as_entries, begin)
+            await self.table_schema.insert_all_async(session, items, as_entries, begin)
         else:
             async with self.create_async_session() as session:
-                await self.table.insert_all_async(session, items, as_entries, begin)
+                await self.table_schema.insert_all_async(session, items, as_entries, begin)
 
     def update_entry(
         self,
@@ -699,10 +699,10 @@ class TableManifestation(BaseObject):
             **kwargs: Additional keyword arguments for the entry.
         """
         if session is not None:
-            self.table.update_entry(session, entry, key, begin, **kwargs)
+            self.table_schema.update_entry(session, entry, key, begin, **kwargs)
         else:
             with self.create_session() as session:
-                self.table.update_entry(session, entry, key, begin, **kwargs)
+                self.table_schema.update_entry(session, entry, key, begin, **kwargs)
 
     async def update_entry_async(
         self,
@@ -722,10 +722,10 @@ class TableManifestation(BaseObject):
             **kwargs: Additional keyword arguments for the entry.
         """
         if session is not None:
-            await self.table.update_entry_async(session, entry, key, begin, **kwargs)
+            await self.table_schema.update_entry_async(session, entry, key, begin, **kwargs)
         else:
             async with self.create_async_session() as session:
-                await self.table.update_entry_async(session, entry, key, begin, **kwargs)
+                await self.table_schema.update_entry_async(session, entry, key, begin, **kwargs)
 
     def update_entries(
         self,
@@ -743,10 +743,10 @@ class TableManifestation(BaseObject):
             begin: If True, begins a transaction for the operation. Defaults to False.
         """
         if session is not None:
-            self.table.update_entries(session, entries, key, begin)
+            self.table_schema.update_entries(session, entries, key, begin)
         else:
             with self.create_session() as session:
-                self.table.update_entries(session, entries, key, begin)
+                self.table_schema.update_entries(session, entries, key, begin)
 
     async def update_entries_async(
         self,
@@ -764,10 +764,10 @@ class TableManifestation(BaseObject):
             begin: If True, begins a transaction for the operation. Defaults to False.
         """
         if session is not None:
-            await self.table.update_entries_async(session, entries, key, begin)
+            await self.table_schema.update_entries_async(session, entries, key, begin)
         else:
             async with self.create_async_session() as session:
-                await self.table.update_entries_async(session, entries, key, begin)
+                await self.table_schema.update_entries_async(session, entries, key, begin)
 
     def delete_item(
         self,
@@ -783,10 +783,10 @@ class TableManifestation(BaseObject):
             begin: If True, begins a transaction for the operation. Defaults to False.
         """
         if session is not None:
-            self.table.delete_item(session, item, begin)
+            self.table_schema.delete_item(session, item, begin)
         else:
             with self.create_session() as session:
-                self.table.delete_item(session, item, begin)
+                self.table_schema.delete_item(session, item, begin)
 
     async def delete_item_async(
         self,
@@ -802,7 +802,7 @@ class TableManifestation(BaseObject):
             begin: If True, begins a transaction for the operation. Defaults to False.
         """
         if session is not None:
-            await self.table.delete_item_async(session, item, begin)
+            await self.table_schema.delete_item_async(session, item, begin)
         else:
             async with self.create_async_session() as session:
-                await self.table.delete_item_async(session, item, begin)
+                await self.table_schema.delete_item_async(session, item, begin)

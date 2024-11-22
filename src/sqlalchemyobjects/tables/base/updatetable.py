@@ -22,13 +22,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.types import BigInteger
 
 # Local Packages #
-from .basetable import BaseTable, TableManifestation
+from .basetable import BaseTableSchema, TableManifestation
 
 
 # Definitions #
 # Classes #
-class BaseUpdateTable(BaseTable):
-    """A base table for tracking updates in a SQLAlchemy ORM model.
+class BaseUpdateTableSchema(BaseTableSchema):
+    """A schema for a base table for tracking updates in a SQLAlchemy ORM model.
 
     Class Attributes:
         __tablename__: The name of the table.
@@ -168,7 +168,7 @@ class UpdateTableManifestation(TableManifestation):
         table: The SQLAlchemy declarative table which this object act as the interface for.
 
     Args:
-        table: The SQLAlchemy declarative table which this object act as the interface for.
+        table_schema: The SQLAlchemy declarative table which this object act as the interface for.
         database: The SQAlchemy database to interface with.
         init: Determines if this object will construct.
         **kwargs: Additional keyword arguments.
@@ -186,10 +186,10 @@ class UpdateTableManifestation(TableManifestation):
             int | None: The last update ID.
         """
         if session is not None:
-            return self.table.get_last_update_id(session)
+            return self.table_schema.get_last_update_id(session)
         else:
             with self.create_session() as session:
-                return self.table.get_last_update_id(session)
+                return self.table_schema.get_last_update_id(session)
 
     async def get_last_update_id_async(self, session: AsyncSession | None = None) -> int | None:
         """Asynchronously gets the last update ID from the table.
@@ -201,10 +201,10 @@ class UpdateTableManifestation(TableManifestation):
             int | None: The last update ID.
         """
         if session is not None:
-            return await self.table.get_last_update_id_async(session)
+            return await self.table_schema.get_last_update_id_async(session)
         else:
             async with self.create_async_session() as session:
-                return await self.table.get_last_update_id_async(session)
+                return await self.table_schema.get_last_update_id_async(session)
 
     def get_from_update(
         self,
@@ -225,10 +225,10 @@ class UpdateTableManifestation(TableManifestation):
             Result | list[dict[str, Any]]: The result of the query, either as a Result object or as a list of dictionaries.
         """
         if session is not None:
-            return self.table.get_from_update(session, update_id, inclusive, as_entries)
+            return self.table_schema.get_from_update(session, update_id, inclusive, as_entries)
         else:
             with self.create_session() as session:
-                return self.table.get_from_update(session, update_id, inclusive, as_entries)
+                return self.table_schema.get_from_update(session, update_id, inclusive, as_entries)
 
     async def get_from_update_async(
         self,
@@ -249,7 +249,7 @@ class UpdateTableManifestation(TableManifestation):
             Result | list[dict[str, Any]]: The result of the query, either as a Result object or as a list of dictionaries.
         """
         if session is not None:
-            return await self.table.get_from_update_async(session, update_id, inclusive, as_entries)
+            return await self.table_schema.get_from_update_async(session, update_id, inclusive, as_entries)
         else:
             async with self.create_async_session() as session:
-                return await self.table.get_from_update_async(session, update_id, inclusive, as_entries)
+                return await self.table_schema.get_from_update_async(session, update_id, inclusive, as_entries)

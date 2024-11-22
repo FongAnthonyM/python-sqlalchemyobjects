@@ -20,13 +20,13 @@ from sqlalchemy.orm import Session, DeclarativeBase
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Local Packages #
-from .singletontable import BaseSingletonTable, SingletonTableManifestation
+from .singletontable import BaseSingletonTableSchema, SingletonTableManifestation
 
 
 # Definitions #
 # Classes #
-class BaseMetaInformationTable(BaseSingletonTable):
-    """A table for storing meta-information in a SQLAlchemy ORM model.
+class BaseMetaInformationTableSchema(BaseSingletonTableSchema):
+    """A schema for a table for storing meta-information in a SQLAlchemy ORM model.
 
     This class extends the BaseTable class and provides additional methods for creating, retrieving, and updating
     meta-information entries in the table.
@@ -86,7 +86,7 @@ class BaseMetaInformationTable(BaseSingletonTable):
         cls,
         session: Session,
         as_entry: bool = True,
-    ) -> Union[dict[str, Any], "BaseSingletonTable"]:
+    ) -> Union[dict[str, Any], "BaseSingletonTableSchema"]:
         """Retrieves meta-information from the table.
 
         Args:
@@ -94,7 +94,7 @@ class BaseMetaInformationTable(BaseSingletonTable):
             as_entry: If True, returns the entry as a dictionary; otherwise, returns the table object. Defaults to True.
 
         Returns:
-            Union[dict[str, Any], BaseMetaInformationTable]: The meta-information entry, either as a dictionary or as a table object.
+            Union[dict[str, Any], BaseMetaInformationTableSchema]: The meta-information entry, either as a dictionary or as a table object.
         """
         return cls.get_entry(session=session, as_entry=as_entry)
 
@@ -103,7 +103,7 @@ class BaseMetaInformationTable(BaseSingletonTable):
         cls,
         session: AsyncSession,
         as_entry: bool = True,
-    ) -> Union[dict[str, Any], "BaseSingletonTable"]:
+    ) -> Union[dict[str, Any], "BaseSingletonTableSchema"]:
         """Asynchronously retrieves meta-information from the table.
 
         Args:
@@ -111,7 +111,7 @@ class BaseMetaInformationTable(BaseSingletonTable):
             as_entry: If True, returns the entry as a dictionary; otherwise, returns the table object. Defaults to True.
 
         Returns:
-            Union[dict[str, Any], BaseMetaInformationTable]: The meta-information entry, either as a dictionary or as a table object.
+            Union[dict[str, Any], BaseMetaInformationTableSchema]: The meta-information entry, either as a dictionary or as a table object.
         """
         return await cls.get_entry_async(session=session, as_entry=as_entry)
 
@@ -161,11 +161,11 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
 
     Attributes:
         _database: A weak reference to the SQAlchemy database to interface with.
-        table: The SQLAlchemy declarative table which this object act as the interface for.
+        table_schema: The SQLAlchemy declarative table which this object act as the interface for.
         _meta_information: Cached meta-information.
 
     Args:
-        table: The SQLAlchemy declarative table which this object act as the interface for.
+        table_schema: The SQLAlchemy declarative table which this object act as the interface for.
         database: The SQAlchemy database to interface with.
         init_info: Initial meta-information.
         init: Determines if this object will construct.
@@ -205,21 +205,15 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
 
         # Object Construction #
         if init:
-            self.construct(table, database, init_info, **kwargs)
+            self.construct(table, database, **kwargs)
 
     # Instance Methods #
     # Constructors/Destructors
-    def construct(
-        self,
-        composite: Any = None,
-        table_name: str | None = None,
-        init_info: dict[str, Any] | None = None,
-        **kwargs: Any,
-    ) -> None:
+    def construct(self, table_schema: Any = None, database: str | None = None, **kwargs: dict[str, Any] | None) -> None:
         """Constructs this object.
 
         Args:
-            composite: The object which this object is a component of.
+            table_schema: The object which this object is a component of.
             table_name: The name of the table.
             init_info: Initial meta-information.
             **kwargs: Additional keyword arguments.
@@ -227,7 +221,7 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
         if init_info is not None:
             self._meta_information.update(init_info)
 
-        super().construct(composite, table_name, **kwargs)
+        super().construct(table_schema, table_name, **kwargs)
 
     def build(self, *args: Any, **kwargs: Any) -> None:
         """Builds the table."""
@@ -254,10 +248,10 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
             **kwargs: Additional keyword arguments.
         """
         if session is not None:
-            self.table.create_information(session=session, entry=entry, begin=begin, **kwargs)
+            self.table_schema.create_information(session=session, entry=entry, begin=begin, **kwargs)
         else:
             with self.create_session() as session:
-                self.table.create_information(session=session, entry=entry, begin=True, **kwargs)
+                self.table_schema.create_information(session=session, entry=entry, begin=True, **kwargs)
 
     async def create_meta_information_async(
         self,
@@ -275,7 +269,7 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
             **kwargs: Additional keyword arguments.
         """
         if session is not None:
-            await self.table.create_information_async(
+            await self.table_schema.create_information_async(
                 session=session,
                 entry=entry,
                 begin=begin,
@@ -283,7 +277,7 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
             )
         else:
             async with self.create_async_session() as session:
-                await self.table.create_information_async(
+                await self.table_schema.create_information_async(
                     session=session,
                     entry=entry,
                     begin=begin,
@@ -294,7 +288,7 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
         self,
         session: Session | None = None,
         as_entry: bool = True,
-    ) -> dict[str, Any] | BaseMetaInformationTable:
+    ) -> dict[str, Any] | BaseMetaInformationTableSchema:
         """Gets meta-information from the table.
 
         Args:
@@ -302,13 +296,13 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
             as_entry: If True, returns the meta-information as a dictionary.
 
         Returns:
-            dict[str, Any] | BaseMetaInformationTable: The meta-information.
+            dict[str, Any] | BaseMetaInformationTableSchema: The meta-information.
         """
         if session is not None:
-            _meta_information = self.table.get_information(session, as_entry=False)
+            _meta_information = self.table_schema.get_information(session, as_entry=False)
         else:
             with self.create_session() as session:
-                _meta_information = self.table.get_information(session, as_entry=False)
+                _meta_information = self.table_schema.get_information(session, as_entry=False)
 
         self._meta_information.update(_meta_information.as_entry())
         return self._meta_information.copy() if as_entry else _meta_information
@@ -317,7 +311,7 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
         self,
         session: AsyncSession | None = None,
         as_entry: bool = True,
-    ) -> dict[str, Any] | BaseMetaInformationTable:
+    ) -> dict[str, Any] | BaseMetaInformationTableSchema:
         """Asynchronously gets meta-information from the table.
 
         Args:
@@ -325,13 +319,13 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
             as_entry: If True, returns the meta-information as a dictionary.
 
         Returns:
-            dict[str, Any] | BaseMetaInformationTable: The meta-information.
+            dict[str, Any] | BaseMetaInformationTableSchema: The meta-information.
         """
         if session is not None:
-            _meta_information = await self.table.get_information_async(session, as_entry=False)
+            _meta_information = await self.table_schema.get_information_async(session, as_entry=False)
         else:
             async with self.create_async_session() as session:
-                _meta_information = await self.table.get_information_async(session, as_entry=False)
+                _meta_information = await self.table_schema.get_information_async(session, as_entry=False)
 
         self._meta_information.update(_meta_information.as_entry())
         return self._meta_information.copy() if as_entry else _meta_information
@@ -352,10 +346,10 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
             **kwargs: Additional keyword arguments.
         """
         if session is not None:
-            self.table.set_information(session=session, entry=entry, begin=begin, **kwargs)
+            self.table_schema.set_information(session=session, entry=entry, begin=begin, **kwargs)
         else:
             with self.create_session() as session:
-                self.table.set_information(session=session, entry=entry, begin=True, **kwargs)
+                self.table_schema.set_information(session=session, entry=entry, begin=True, **kwargs)
         self._meta_information.clear()
 
     async def set_meta_information_async(
@@ -374,10 +368,10 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
             **kwargs: Additional keyword arguments.
         """
         if session is not None:
-            await self.table.set_information_async(session=session, entry=entry, begin=begin, **kwargs)
+            await self.table_schema.set_information_async(session=session, entry=entry, begin=begin, **kwargs)
         else:
             async with self.create_async_session() as session:
-                await self.table.set_information_async(
+                await self.table_schema.set_information_async(
                     session=session,
                     entry=entry,
                     begin=True,
@@ -399,10 +393,10 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
             **kwargs: Additional keyword arguments.
         """
         if session is not None:
-            self.table.set_information(session=session, entry=self._meta_information, begin=begin, **kwargs)
+            self.table_schema.set_information(session=session, entry=self._meta_information, begin=begin, **kwargs)
         else:
             with self.create_session() as session:
-                self.table.set_information(session=session, entry=self._meta_information, begin=True, **kwargs)
+                self.table_schema.set_information(session=session, entry=self._meta_information, begin=True, **kwargs)
 
     async def save_cached_meta_information_async(
         self,
@@ -418,10 +412,10 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
             **kwargs: Additional keyword arguments.
         """
         if session is not None:
-            await self.table.set_information_async(session=session, entry=self._meta_information, begin=begin, **kwargs)
+            await self.table_schema.set_information_async(session=session, entry=self._meta_information, begin=begin, **kwargs)
         else:
             async with self.create_async_session() as session:
-                await self.table.set_information_async(
+                await self.table_schema.set_information_async(
                     session=session,
                     entry=self._meta_information,
                     begin=True,
