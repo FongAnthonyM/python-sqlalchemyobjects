@@ -487,6 +487,17 @@ class TableManifestation(BaseObject):
         if init:
             self.construct(table, database, **kwargs)
 
+    # Pickling
+    def __getstate__(self) -> dict[str, Any]:
+        """Creates a dictionary of attributes which can be used to rebuild this object.
+
+        Returns:
+            dict: A dictionary of this object's attributes.
+        """
+        state = super().__getstate__()
+        state["_database"] = None
+        return state
+
     # Instance Methods #
     # Construction/Destruction
     def construct(

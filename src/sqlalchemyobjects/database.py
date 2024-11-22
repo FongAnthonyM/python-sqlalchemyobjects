@@ -157,6 +157,8 @@ class Database(BaseObject):
         """
         was_open = state.pop("is_open")
         super().__setstate__(state=state)
+        for table in self.tables.values():
+            table.database = self
         if was_open:
             self.open()
 
