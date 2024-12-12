@@ -70,7 +70,7 @@ class BaseTableSchema:
         return kwargs
 
     @classmethod
-    def item_from_entry(cls, dict_: dict[str, Any] | None = None, /, **kwargs) -> "BaseTable":
+    def item_from_entry(cls, dict_: dict[str, Any] | None = None, /, **kwargs) -> "BaseTableSchema":
         """Creates an item from a dictionary entry or keyword arguments.
 
         Args:
@@ -78,7 +78,7 @@ class BaseTableSchema:
             **kwargs: Additional keyword arguments for the entry.
 
         Returns:
-            BaseTable: The new item from the table.
+            BaseTableSchema: The new item from the table.
         """
         return cls(**cls.format_entry_kwargs(**(({} if dict_ is None else dict_) | kwargs)))
 
@@ -380,7 +380,7 @@ class BaseTableSchema:
     def delete_item(
         cls,
         session: Session,
-        item: "BaseTable",
+        item: "BaseTableSchema",
         begin: bool = False,
     ) -> None:
         """Deletes an item from the table.
@@ -400,7 +400,7 @@ class BaseTableSchema:
     async def delete_item_async(
         cls,
         session: AsyncSession,
-        item: "BaseTable",
+        item: "BaseTableSchema",
         begin: bool = False,
     ) -> None:
         """Deletes an item from the table asynchronously.
@@ -771,7 +771,7 @@ class TableManifestation(BaseObject):
 
     def delete_item(
         self,
-        item: BaseTable,
+        item: BaseTableSchema,
         session: Session | None = None,
         begin: bool = False,
     ) -> None:
@@ -790,7 +790,7 @@ class TableManifestation(BaseObject):
 
     async def delete_item_async(
         self,
-        item: BaseTable,
+        item: BaseTableSchema,
         session: AsyncSession | None = None,
         begin: bool = False,
     ) -> None:
