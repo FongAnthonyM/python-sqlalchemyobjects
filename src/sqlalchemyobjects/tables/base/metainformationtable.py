@@ -191,7 +191,7 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
     # Construction/Destruction
     def __init__(
         self,
-        table: type[DeclarativeBase] | None = None,
+        table_schema: type[DeclarativeBase] | None = None,
         database: Optional["BaseDatabase"] = None,
         init_info: dict[str, Any] | None = None,
         init: bool = True,
@@ -205,11 +205,17 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
 
         # Object Construction #
         if init:
-            self.construct(table, database, **kwargs)
+            self.construct(table_schema, database, **kwargs)
 
     # Instance Methods #
     # Constructors/Destructors
-    def construct(self, table_schema: Any = None, database: str | None = None, **kwargs: dict[str, Any] | None) -> None:
+    def construct(
+        self,
+        table_schema: Any = None,
+        database: str | None = None,
+        init_info: dict[str, Any] | None = None,
+        **kwargs: dict[str, Any] | None,
+    ) -> None:
         """Constructs this object.
 
         Args:
@@ -221,7 +227,7 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
         if init_info is not None:
             self._meta_information.update(init_info)
 
-        super().construct(table_schema, table_name, **kwargs)
+        super().construct(table_schema, database, **kwargs)
 
     def build(self, *args: Any, **kwargs: Any) -> None:
         """Builds the table."""

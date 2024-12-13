@@ -371,8 +371,8 @@ class Database(BaseObject):
         """
         if table_map is None:
             table_map = self.table_map
-        for name, (table_type, table_base, kwargs) in table_map.items():
-            self.tables[name] = table_type(table=table_base, database=self, **kwargs)
+        for name, (table_type, table_schema, kwargs) in table_map.items():
+            self.tables[name] = table_type(table_schema=table_schema, database=self, **kwargs)
 
     def build_tables(self) -> None:
         """Builds the tables"""
