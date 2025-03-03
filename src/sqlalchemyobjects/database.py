@@ -196,10 +196,13 @@ class Database(BaseObject):
 
         if create:
             self.create_database()
-            self.close()
-
-        if open_:
+            self.build_session_maker()
+            self.build_async_session_maker()
+        elif open_:
             self.open(**kwargs)
+
+        if create and not open_:
+            self.close()
 
         super().construct()
 
@@ -280,7 +283,7 @@ class Database(BaseObject):
             self._engine = None
         self._session_maker = None
         if self._async_engine is not None:
-            run(self._async_engine.dispose())
+            self._async_engine.dispose()
             self._async_engine = None
         self._async_session_maker = None
         return self._engine is None
