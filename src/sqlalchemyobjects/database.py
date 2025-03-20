@@ -196,8 +196,6 @@ class Database(BaseObject):
 
         if create:
             self.create_database()
-            self.build_session_maker()
-            self.build_async_session_maker()
         elif open_:
             self.open(**kwargs)
 
@@ -239,6 +237,8 @@ class Database(BaseObject):
 
         if self._engine is None or path is not None:
             self.create_engine(**kwargs)
+            self.build_session_maker()
+            self.build_async_session_maker()
 
         self.schema.metadata.create_all(self._engine)
 
@@ -254,6 +254,8 @@ class Database(BaseObject):
 
         if self._async_engine is None or path is not None:
             self.create_engine(**kwargs)
+            self.build_session_maker()
+            self.build_async_session_maker()
 
         async with self._async_engine.begin() as conn:
             await conn.run_sync(self.schema.metadata.create_all)

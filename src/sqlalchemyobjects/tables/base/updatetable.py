@@ -165,7 +165,7 @@ class UpdateTableManifestation(TableManifestation):
 
     Attributes:
         _database: A weak reference to the SQAlchemy database to interface with.
-        table: The SQLAlchemy declarative table which this object act as the interface for.
+        table_schema: The SQLAlchemy declarative table which this object act as the interface for.
 
     Args:
         table_schema: The SQLAlchemy declarative table which this object act as the interface for.

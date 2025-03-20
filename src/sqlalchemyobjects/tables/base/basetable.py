@@ -130,7 +130,7 @@ class BaseTableSchema:
             begin: If True, begins a transaction for the operation. Defaults to False.
             **kwargs: Additional keyword arguments for the entry.
         """
-        if as_entry:
+        if as_entry or entry is not None:
             item = cls.item_from_entry(**(({} if entry is None else entry) | kwargs))
 
         if begin:
@@ -159,7 +159,7 @@ class BaseTableSchema:
             begin: If True, begins a transaction for the operation. Defaults to False.
             **kwargs: Additional keyword arguments for the entry.
         """
-        if as_entry:
+        if as_entry or entry is not None:
             item = cls.item_from_entry(**(({} if entry is None else entry) | kwargs))
 
         if begin:
@@ -447,7 +447,7 @@ class TableManifestation(BaseObject):
 
     Attributes:
         _database: A weak reference to the SQAlchemy database to interface with.
-        table: The SQLAlchemy declarative table which this object act as the interface for.
+        table_schema: The SQLAlchemy declarative table which this object act as the interface for.
 
     Args:
         table_schema: The SQLAlchemy declarative table which this object act as the interface for.
