@@ -16,7 +16,7 @@ __email__ = __email__
 from collections.abc import Iterable
 from typing import Any, Optional
 import uuid
-from weakref import ref
+from weakref import ReferenceType
 
 # Third-Party Packages #
 from baseobjects import BaseObject
@@ -457,7 +457,7 @@ class TableManifestation(BaseObject):
     """
 
     # Attributes #
-    _database: ref["BaseDatabase"] | None = None
+    _database: ReferenceType["BaseDatabase"] | None = None
     table_schema: type[DeclarativeBase] | None = None
 
     # Properties #
@@ -469,7 +469,7 @@ class TableManifestation(BaseObject):
     @database.setter
     def database(self, value: Any) -> None:
         """Sets the database object associated with the table_schema manifestation."""
-        self._database = ref(value)
+        self._database = ReferenceType(value)
 
     # Magic Methods #
     # Construction/Destruction
@@ -488,15 +488,42 @@ class TableManifestation(BaseObject):
             self.construct(table_schema, database, **kwargs)
 
     # Pickling
-    def __getstate__(self) -> dict[str, Any]:
-        """Creates a dictionary of attributes which can be used to rebuild this object.
+    def __getstate__(self) -> None | dict[str, Any] | tuple[dict[str, Any] | None, dict[str, Any]]:
+        """Gets the object's state for pickling.
 
         Returns:
-            dict: A dictionary of this object's attributes.
+            The state returned will be either of the following types based on the presence of __dict__ and __slots__:
+                None: __dict__ nor __slots__ are present.
+                dict: __dict__ is present and __slots__ is not present.
+                tuple[None, dict]: __dict__ is not present and __slots__ is present.
+                tuple[dict, dict]: __dict__ is present and __slots__ is present.
         """
         state = super().__getstate__()
-        state["_database"] = None
+        state["_database"] = self._database() if self._database is not None else None
         return state
+
+    def __setstate__(self, state: Any) -> None:
+        """Sets the object's state from a pickled state.
+
+        By default, the state can be one of the following types with the corresponding behavior:
+            None: Will not set any state.
+            dict: Will set the __dict__ attribute to the state.
+            tuple[None, dict]: Will set the slot values to the second dict of the tuple.
+            tuple[dict, dict]: Will set the __dict__ attribute to the first dict of the tuple and set the slot values
+                to the second dict of the tuple.
+
+        Args:
+            state: An object which can be used to set the state of this object.
+        """
+        # Remove strong reference
+        _database = state.pop("_database", None)
+
+        # Set State
+        self.__setstate__(state)
+
+        # Set weak reference
+        if _database is not None:
+            self.database = _database
 
     # Instance Methods #
     # Construction/Destruction
