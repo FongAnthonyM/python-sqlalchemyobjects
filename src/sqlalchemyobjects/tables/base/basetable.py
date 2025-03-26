@@ -519,7 +519,7 @@ class TableManifestation(BaseObject):
         _database = state.pop("_database", None)
 
         # Set State
-        self.__setstate__(state)
+        super().__setstate__(state)
 
         # Set weak reference
         if _database is not None:
@@ -541,7 +541,7 @@ class TableManifestation(BaseObject):
             **kwargs: Additional keyword arguments to pass to the superclass construct method.
         """
         if database is not None:
-            self._database = ref(database)
+            self._database = ReferenceType(database)
 
         if table_schema is not None:
             self.table_schema = table_schema
