@@ -127,38 +127,6 @@ class BaseUpdateTableSchema(BaseTableSchema):
         results = await session.execute(update_statement)
         return [r.as_entry() for r in results.scalars()] if as_entries else results
 
-    # Instance Methods #
-    def update(self, dict_: dict[str, Any] | None = None, /, **kwargs) -> None:
-        """Updates the row of the table with the provided dictionary or keyword arguments.
-
-        Args:
-            dict_: A dictionary of attributes/columns to update. Defaults to None.
-            **kwargs: Additional keyword arguments for the attributes to update.
-        """
-        dict_ = ({} if dict_ is None else dict_) | kwargs
-        if (update_id := dict_.get("update_id", None)) is not None:
-            self.update_id = update_id
-
-    def as_dict(self) -> dict[str, Any]:
-        """Creates a dictionary with all the contents of the row.
-
-        Returns:
-            dict[str, Any]: A dictionary representation of the row.
-        """
-        dict_ = super().as_dict()
-        dict_.update(update_id=self.update_id)
-        return dict_
-
-    def as_entry(self) -> dict[str, Any]:
-        """Creates a dictionary with the entry contents of the row.
-
-        Returns:
-            dict[str, Any]: A dictionary representation of the entry.
-        """
-        entry = super().as_entry()
-        entry.update(update_id=self.update_id)
-        return entry
-
 
 class UpdateTableManifestation(TableManifestation):
     """The manifestation of an UpdateTable.

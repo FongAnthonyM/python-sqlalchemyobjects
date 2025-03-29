@@ -14,12 +14,13 @@ __email__ = __email__
 # Imports #
 # Standard Libraries #
 from asyncio import run
+from collections.abc import Iterable
 import pathlib
 from pathlib import Path
 from typing import Any
 
 # Third-Party Packages #
-from baseobjects import BaseObject
+from baseobjects import BaseReducible
 from sqlalchemy import create_engine, Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine, async_sessionmaker
@@ -30,7 +31,7 @@ from .tables import TableManifestation
 
 # Definitions #
 # Classes #
-class Database(BaseObject):
+class Database(BaseReducible):
     """Manages the database including creating, opening, and modifying the database.
 
     Attributes:
@@ -402,3 +403,97 @@ class Database(BaseObject):
         """Loads the tables."""
         for table in self.tables.values():
             table.build()
+
+    # Table Operations
+    def insert(self, item: Any, session: Session | None = None, begin: bool = False) -> None:
+        """Inserts an item into the database.
+
+        Args:
+            item: The item to insert.
+            session: The SQLAlchemy session to use for the operation.
+            begin: If True, begins a transaction for the operation. Defaults to False.
+        """
+        if session is not None:
+            if begin:
+                with session.begin():
+                    session.add(item)
+            else:
+                session.add(item)
+        else:
+            with self.create_session() as session:
+                if begin:
+                    with session.begin():
+                        session.add(item)
+                else:
+                    session.add(item)
+
+    async def insert_async(self, item: Any, session: AsyncSession | None = None, begin: bool = False) -> None:
+        """Asynchronously, inserts an item into the database.
+
+       Args:
+           item: The item to insert.
+           session: The SQLAlchemy session to use for the operation.
+           begin: If True, begins a transaction for the operation. Defaults to False.
+       """
+        if session is not None:
+            if begin:
+                async with session.begin():
+                    session.add(item)
+            else:
+                session.add(item)
+        else:
+            async with self.create_session() as session:
+                if begin:
+                    async with session.begin():
+                        session.add(item)
+                else:
+                    session.add(item)
+
+    def insert_all(self, items: Iterable[Any], session: Session | None = None, begin: bool = False) -> None:
+        """Inserts items into the database.
+
+        Args:
+            items: The items to insert.
+            session: The SQLAlchemy session to use for the operation.
+            begin: If True, begins a transaction for the operation. Defaults to False.
+        """
+        if session is not None:
+            if begin:
+                with session.begin():
+                    session.add_all(items)
+            else:
+                session.add_all(items)
+        else:
+            with self.create_session() as session:
+                if begin:
+                    with session.begin():
+                        session.add_all(items)
+                else:
+                    session.add_all(items)
+
+    async def insert_all_async(
+        self,
+        items: Iterable[Any],
+        session: AsyncSession | None = None,
+        begin: bool = False,
+    ) -> None:
+        """Asynchronously, inserts items into the database.
+
+       Args:
+           items: The items to insert.
+           session: The SQLAlchemy session to use for the operation.
+           begin: If True, begins a transaction for the operation. Defaults to False.
+       """
+        if session is not None:
+            if begin:
+                async with session.begin():
+                    session.add_all(items)
+            else:
+                session.add_all(items)
+        else:
+            async with self.create_session() as session:
+                if begin:
+                    async with session.begin():
+                        session.add_all(items)
+                else:
+                    session.add_all(items)

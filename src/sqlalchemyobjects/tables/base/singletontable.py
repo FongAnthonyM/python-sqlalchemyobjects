@@ -64,13 +64,13 @@ class BaseSingletonTableSchema(BaseTableSchema):
             with session.begin():
                 result = session.execute(lambda_stmt(lambda: select(cls))).scalar()
                 if result is None:
-                    cls.insert(session=session, entry=entry, as_entry=True, begin=False, **kwargs)
+                    cls.insert(session=session, as_dict=True, begin=False, **kwargs)
                 else:
                     result.update(entry, **kwargs)
         else:
             result = session.execute(lambda_stmt(lambda: select(cls))).scalar()
             if result is None:
-                cls.insert(session=session, entry=entry, as_entry=True, begin=False, **kwargs)
+                cls.insert(session=session, as_dict=True, begin=False, **kwargs)
             else:
                 result.update(entry, **kwargs)
 
