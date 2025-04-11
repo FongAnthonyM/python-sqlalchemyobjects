@@ -332,13 +332,13 @@ class BaseTableSchema:
             async with session.begin():
                 item = (await session.execute(statement)).scalar()
                 if item is None:
-                    await cls.insert_async(session=session, item=entry, as_entry=True)
+                    await cls.insert_async(session=session, item=entry, as_dict=True)
                 else:
                     item.update(entry)
         else:
             item = (await session.execute(statement)).scalar()
             if item is None:
-                await cls.insert_async(session=session, item=entry, as_entry=True)
+                await cls.insert_async(session=session, item=entry, as_dict=True)
             else:
                 item.update(entry)
 
@@ -497,7 +497,7 @@ class BaseTableSchema:
             Result | list[dict[str, Any]]: The result of the query, either as a Result object or as a list of dictionaries.
         """
         results = session.execute(lambda_stmt(lambda: select(cls)))
-        return [r.as_entry() for r in results.scalars()] if as_python else results
+        return [r.as_python_dict() for r in results.scalars()] if as_python else results
 
     @classmethod
     async def get_all_async(cls, session: AsyncSession, as_python: bool = False) -> Result | list[dict[str, Any]]:

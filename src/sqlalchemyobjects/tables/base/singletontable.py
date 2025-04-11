@@ -64,13 +64,13 @@ class BaseSingletonTableSchema(BaseTableSchema):
             with session.begin():
                 result = session.execute(lambda_stmt(lambda: select(cls))).scalar()
                 if result is None:
-                    cls.insert(session=session, as_dict=True, begin=False, **kwargs)
+                    cls.insert(session=session, item=entry, as_dict=True, begin=False, **kwargs)
                 else:
                     result.update(entry, **kwargs)
         else:
             result = session.execute(lambda_stmt(lambda: select(cls))).scalar()
             if result is None:
-                cls.insert(session=session, as_dict=True, begin=False, **kwargs)
+                cls.insert(session=session, item=entry, as_dict=True, begin=False, **kwargs)
             else:
                 result.update(entry, **kwargs)
 
@@ -97,13 +97,13 @@ class BaseSingletonTableSchema(BaseTableSchema):
             async with session.begin():
                 result = (await session.execute(statement)).scalar()
                 if result is None:
-                    await cls.insert_async(session=session, entry=entry, as_entry=True, begin=False, **kwargs)
+                    await cls.insert_async(session=session, item=entry, as_dict=True, begin=False, **kwargs)
                 else:
                     result.update(entry, **kwargs)
         else:
             result = (await session.execute(statement)).scalar()
             if result is None:
-                await cls.insert_async(session=session, entry=entry, as_entry=True, begin=False, **kwargs)
+                await cls.insert_async(session=session, item=entry, as_dict=True, begin=False, **kwargs)
             else:
                 result.update(entry, **kwargs)
 
@@ -111,37 +111,37 @@ class BaseSingletonTableSchema(BaseTableSchema):
     def get_entry(
         cls,
         session: Session,
-        as_entry: bool = True,
+        as_python: bool = True,
     ) -> Union[dict[str, Any], "BaseSingletonTableSchema"]:
         """Retrieves the entry from the table.
 
         Args:
             session: The SQLAlchemy session to use for the query.
-            as_entry: If True, returns the entry as a dictionary; otherwise, returns the table object. Defaults to True.
+            as_python: If True, returns the entry as a dictionary; otherwise, returns the table object. Defaults to True.
 
         Returns:
             Union[dict[str, Any], BaseSingletonTableSchema]: The meta-information entry, either as a dictionary or as a table object.
         """
         result = session.execute(lambda_stmt(lambda: select(cls))).scalar()
-        return (result.as_entry() if as_entry else result) if result is not None else {}
+        return (result.as_python_dict() if as_python else result) if result is not None else {}
 
     @classmethod
     async def get_entry_async(
         cls,
         session: AsyncSession,
-        as_entry: bool = True,
+        as_python: bool = True,
     ) -> Union[dict[str, Any], "BaseSingletonTableSchema"]:
         """Asynchronously retrieves the single entry from the table.
 
         Args:
             session: The SQLAlchemy async session to use for the query.
-            as_entry: If True, returns the entry as a dictionary; otherwise, returns the table object. Defaults to True.
+            as_python: If True, returns the entry as a dictionary; otherwise, returns the table object. Defaults to True.
 
         Returns:
             Union[dict[str, Any], BaseSingletonTableSchema]: The meta-information entry, either as a dictionary or as a table object.
         """
         result = (await session.execute(lambda_stmt(lambda: select(cls)))).scalar()
-        return (result.as_entry() if as_entry else result) if result is not None else {}
+        return (await result.as_python_dict_async() if as_python else result) if result is not None else {}
 
     @classmethod
     def set_entry(

@@ -85,35 +85,35 @@ class BaseMetaInformationTableSchema(BaseSingletonTableSchema):
     def get_information(
         cls,
         session: Session,
-        as_entry: bool = True,
+        as_python: bool = True,
     ) -> Union[dict[str, Any], "BaseSingletonTableSchema"]:
         """Retrieves meta-information from the table.
 
         Args:
             session: The SQLAlchemy session to use for the query.
-            as_entry: If True, returns the entry as a dictionary; otherwise, returns the table object. Defaults to True.
+            as_python: If True, returns the entry as a dictionary; otherwise, returns the table object. Defaults to True.
 
         Returns:
             Union[dict[str, Any], BaseMetaInformationTableSchema]: The meta-information entry, either as a dictionary or as a table object.
         """
-        return cls.get_entry(session=session, as_entry=as_entry)
+        return cls.get_entry(session=session, as_python=as_python)
 
     @classmethod
     async def get_information_async(
         cls,
         session: AsyncSession,
-        as_entry: bool = True,
+        as_python: bool = True,
     ) -> Union[dict[str, Any], "BaseSingletonTableSchema"]:
         """Asynchronously retrieves meta-information from the table.
 
         Args:
             session: The SQLAlchemy async session to use for the query.
-            as_entry: If True, returns the entry as a dictionary; otherwise, returns the table object. Defaults to True.
+            as_python: If True, returns the entry as a dictionary; otherwise, returns the table object. Defaults to True.
 
         Returns:
             Union[dict[str, Any], BaseMetaInformationTableSchema]: The meta-information entry, either as a dictionary or as a table object.
         """
-        return await cls.get_entry_async(session=session, as_entry=as_entry)
+        return await cls.get_entry_async(session=session, as_python=as_python)
 
     @classmethod
     def set_information(
@@ -293,48 +293,48 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
     def get_meta_information(
         self,
         session: Session | None = None,
-        as_entry: bool = True,
+        as_python: bool = True,
     ) -> dict[str, Any] | BaseMetaInformationTableSchema:
         """Gets meta-information from the table.
 
         Args:
             session: The SQLAlchemy session to use for the query.
-            as_entry: If True, returns the meta-information as a dictionary.
+            as_python: If True, returns the meta-information as a dictionary.
 
         Returns:
             dict[str, Any] | BaseMetaInformationTableSchema: The meta-information.
         """
         if session is not None:
-            _meta_information = self.table_schema.get_information(session, as_entry=False)
+            _meta_information = self.table_schema.get_information(session, as_python=False)
         else:
             with self.create_session() as session:
-                _meta_information = self.table_schema.get_information(session, as_entry=False)
+                _meta_information = self.table_schema.get_information(session, as_python=False)
 
-        self._meta_information.update(_meta_information.as_entry())
-        return self._meta_information.copy() if as_entry else _meta_information
+        self._meta_information.update(_meta_information.as_python_dict())
+        return self._meta_information.copy() if as_python else _meta_information
 
     async def get_meta_information_async(
         self,
         session: AsyncSession | None = None,
-        as_entry: bool = True,
+        as_python: bool = True,
     ) -> dict[str, Any] | BaseMetaInformationTableSchema:
         """Asynchronously gets meta-information from the table.
 
         Args:
             session: The SQLAlchemy session to use for the query.
-            as_entry: If True, returns the meta-information as a dictionary.
+            as_python: If True, returns the meta-information as a dictionary.
 
         Returns:
             dict[str, Any] | BaseMetaInformationTableSchema: The meta-information.
         """
         if session is not None:
-            _meta_information = await self.table_schema.get_information_async(session, as_entry=False)
+            _meta_information = await self.table_schema.get_information_async(session, as_python=False)
         else:
             async with self.create_async_session() as session:
-                _meta_information = await self.table_schema.get_information_async(session, as_entry=False)
+                _meta_information = await self.table_schema.get_information_async(session, as_python=False)
 
-        self._meta_information.update(_meta_information.as_entry())
-        return self._meta_information.copy() if as_entry else _meta_information
+        self._meta_information.update(await _meta_information.as_python_dict_async())
+        return self._meta_information.copy() if as_python else _meta_information
 
     def set_meta_information(
         self,
