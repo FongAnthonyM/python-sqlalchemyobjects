@@ -495,7 +495,7 @@ class BaseTableSchema:
             Result | list[dict[str, Any]]: The result of the query, either as a Result object or as a list of dictionaries.
         """
         result = session.execute(lambda_stmt(lambda: select(cls)))
-        return [r.as_python_dict() for r in result.all()] if as_python else result
+        return [r.as_python_dict() for r in result.scalars()] if as_python else result
 
     @classmethod
     async def get_all_async(cls, session: AsyncSession, as_python: bool = False) -> AsyncResult | list[dict[str, Any]]:
