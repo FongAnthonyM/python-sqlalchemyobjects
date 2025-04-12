@@ -1,5 +1,5 @@
 """singletontable.py
-Classes for a table with stores a single entry in an SQLAlchemy ORM model.
+Classes for a table with stores a single item in an SQLAlchemy ORM model.
 """
 # Package Header #
 from ...header import *
@@ -27,7 +27,7 @@ from .basetable import BaseTableSchema, TableManifestation
 # Definitions #
 # Classes #
 class BaseSingletonTableSchema(BaseTableSchema):
-    """A schema for a table with stores a single entry in an SQLAlchemy ORM model.
+    """A schema for a table with stores a single item in an SQLAlchemy ORM model.
 
     Class Attributes:
         __tablename__: The name of the table.
@@ -43,154 +43,154 @@ class BaseSingletonTableSchema(BaseTableSchema):
 
     # Class Methods #
     @classmethod
-    def create_entry(
+    def create_item(
         cls,
         session: Session,
-        entry: dict[str, Any] | None = None,
+        item: dict[str, Any] | None = None,
         begin: bool = False,
         **kwargs: Any,
     ) -> None:
-        """Creates or updates the single entry in the table.
+        """Creates or updates the single item in the table.
 
-        If an entry already exists, it updates the entry; otherwise, it inserts a new entry.
+        If an item already exists, it updates the item; otherwise, it inserts a new item.
 
         Args:
             session: The SQLAlchemy session to use for the operation.
-            entry: A dictionary representing the entry to create or update. Defaults to None.
+            item: A dictionary representing the item to create or update. Defaults to None.
             begin: If True, begins a transaction for the operation. Defaults to False.
-            **kwargs: Additional keyword arguments for the entry.
+            **kwargs: Additional keyword arguments for the item.
         """
         if begin:
             with session.begin():
                 result = session.execute(lambda_stmt(lambda: select(cls))).scalar()
                 if result is None:
-                    cls.insert(session=session, item=entry, as_dict=True, begin=False, **kwargs)
+                    cls.insert(session=session, item=item, as_dict=True, begin=False, **kwargs)
                 else:
-                    result.update(entry, **kwargs)
+                    result.update(item, **kwargs)
         else:
             result = session.execute(lambda_stmt(lambda: select(cls))).scalar()
             if result is None:
-                cls.insert(session=session, item=entry, as_dict=True, begin=False, **kwargs)
+                cls.insert(session=session, item=item, as_dict=True, begin=False, **kwargs)
             else:
-                result.update(entry, **kwargs)
+                result.update(item, **kwargs)
 
     @classmethod
-    async def create_entry_async(
+    async def create_item_async(
         cls,
         session: AsyncSession,
-        entry: dict[str, Any] | None = None,
+        item: dict[str, Any] | None = None,
         begin: bool = False,
         **kwargs: Any,
     ) -> None:
-        """Asynchronously creates or updates the single entry in the table.
+        """Asynchronously creates or updates the single item in the table.
 
-        If an entry already exists, it updates the entry; otherwise, it inserts a new entry.
+        If an item already exists, it updates the item; otherwise, it inserts a new item.
 
         Args:
             session: The SQLAlchemy async session to use for the operation.
-            entry: A dictionary representing the entry to create or update. Defaults to None.
+            item: A dictionary representing the item to create or update. Defaults to None.
             begin: If True, begins a transaction for the operation. Defaults to False.
-            **kwargs: Additional keyword arguments for the entry.
+            **kwargs: Additional keyword arguments for the item.
         """
         statement = lambda_stmt(lambda: select(cls))
         if begin:
             async with session.begin():
                 result = (await session.execute(statement)).scalar()
                 if result is None:
-                    await cls.insert_async(session=session, item=entry, as_dict=True, begin=False, **kwargs)
+                    await cls.insert_async(session=session, item=item, as_dict=True, begin=False, **kwargs)
                 else:
-                    result.update(entry, **kwargs)
+                    result.update(item, **kwargs)
         else:
             result = (await session.execute(statement)).scalar()
             if result is None:
-                await cls.insert_async(session=session, item=entry, as_dict=True, begin=False, **kwargs)
+                await cls.insert_async(session=session, item=item, as_dict=True, begin=False, **kwargs)
             else:
-                result.update(entry, **kwargs)
+                result.update(item, **kwargs)
 
     @classmethod
-    def get_entry(
+    def get_item(
         cls,
         session: Session,
         as_python: bool = True,
-    ) -> Union[dict[str, Any], "BaseSingletonTableSchema"]:
-        """Retrieves the entry from the table.
+    ) -> Union[dict[str, Any], "BaseSingletonTableSchema", None]:
+        """Retrieves the item from the table.
 
         Args:
             session: The SQLAlchemy session to use for the query.
-            as_python: If True, returns the entry as a dictionary; otherwise, returns the table object. Defaults to True.
+            as_python: If True, returns the item as a dictionary; otherwise, returns the table object. Defaults to True.
 
         Returns:
-            Union[dict[str, Any], BaseSingletonTableSchema]: The meta-information entry, either as a dictionary or as a table object.
+            Union[dict[str, Any], BaseSingletonTableSchema]: The item, either as a dictionary or as a table object.
         """
-        result = session.execute(lambda_stmt(lambda: select(cls))).scalar()
-        return (result.as_python_dict() if as_python else result) if result is not None else {}
+        obj = session.execute(lambda_stmt(lambda: select(cls))).scalar()
+        return (obj.as_python_dict() if as_python else obj) if obj is not None else None
 
     @classmethod
-    async def get_entry_async(
+    async def get_item_async(
         cls,
         session: AsyncSession,
         as_python: bool = True,
-    ) -> Union[dict[str, Any], "BaseSingletonTableSchema"]:
-        """Asynchronously retrieves the single entry from the table.
+    ) -> Union[dict[str, Any], "BaseSingletonTableSchema", None]:
+        """Asynchronously retrieves the single item from the table.
 
         Args:
             session: The SQLAlchemy async session to use for the query.
-            as_python: If True, returns the entry as a dictionary; otherwise, returns the table object. Defaults to True.
+            as_python: If True, returns the item as a dictionary; otherwise, returns the table object. Defaults to True.
 
         Returns:
-            Union[dict[str, Any], BaseSingletonTableSchema]: The meta-information entry, either as a dictionary or as a table object.
+            Union[dict[str, Any], BaseSingletonTableSchema]: The item, either as a dictionary or as a table object.
         """
-        result = (await session.execute(lambda_stmt(lambda: select(cls)))).scalar()
-        return (await result.as_python_dict_async() if as_python else result) if result is not None else {}
+        obj = (await session.execute(lambda_stmt(lambda: select(cls)))).scalar()
+        return (await obj.as_python_dict_async() if as_python else obj) if obj is not None else None
 
     @classmethod
-    def set_entry(
+    def set_item(
         cls,
         session: Session,
-        entry: dict[str, Any] | None = None,
+        item: dict[str, Any] | None = None,
         begin: bool = False,
         **kwargs: Any,
     ) -> None:
-        """Sets the single entry in the table.
+        """Sets the single item in the table.
 
-        Updates the existing entry with the provided information.
+        Updates the existing item with the provided information.
 
         Args:
             session: The SQLAlchemy session to use for the operation.
-            entry: A dictionary representing the entry to update. Defaults to None.
+            item: A dictionary representing the item to update. Defaults to None.
             begin: If True, begins a transaction for the operation. Defaults to False.
-            **kwargs: Additional keyword arguments for the entry.
+            **kwargs: Additional keyword arguments for the item.
         """
         if begin:
             with session.begin():
-                session.execute(lambda_stmt(lambda: select(cls))).scalar().update(entry, **kwargs)
+                session.execute(lambda_stmt(lambda: select(cls))).scalar().update(item, **kwargs)
         else:
-            session.execute(lambda_stmt(lambda: select(cls))).scalar().update(entry, **kwargs)
+            session.execute(lambda_stmt(lambda: select(cls))).scalar().update(item, **kwargs)
 
     @classmethod
-    async def set_entry_async(
+    async def set_item_async(
         cls,
         session: AsyncSession,
-        entry: dict[str, Any] | None = None,
+        item: dict[str, Any] | None = None,
         begin: bool = False,
         **kwargs: Any,
     ) -> None:
-        """Asynchronously sets the single entry in the table.
+        """Asynchronously sets the single item in the table.
 
-        Updates the existing entry with the provided information.
+        Updates the existing item with the provided information.
 
         Args:
             session: The SQLAlchemy async session to use for the operation.
-            entry: A dictionary representing the entry to update. Defaults to None.
+            item: A dictionary representing the item to update. Defaults to None.
             begin: If True, begins a transaction for the operation. Defaults to False.
-            **kwargs: Additional keyword arguments for the entry.
+            **kwargs: Additional keyword arguments for the item.
         """
         statement = lambda_stmt(lambda: select(cls))
         if begin:
             async with session.begin():
-                (await session.execute(statement)).scalar().update(entry, **kwargs)
+                (await session.execute(statement)).scalar().update(item, **kwargs)
         else:
-            (await session.execute(statement)).scalar().update(entry, **kwargs)
+            (await session.execute(statement)).scalar().update(item, **kwargs)
 
 
 class SingletonTableManifestation(TableManifestation):

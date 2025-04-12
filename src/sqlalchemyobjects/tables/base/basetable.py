@@ -25,7 +25,7 @@ from weakref import ReferenceType
 from baseobjects import BaseReducible
 from sqlalchemy import Uuid, Result, select, lambda_stmt, StatementLambdaElement
 from sqlalchemy.orm import mapped_column, Session, DeclarativeBase
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, AsyncResult
 
 # Local Packages #
 
@@ -296,7 +296,7 @@ class BaseTableSchema:
         statement = cls.create_find_column_value_statement(key, entry[key])
         if begin:
             with session.begin():
-                item = session.execute(statement).scalar()
+                item = session.execute(statement).row()
                 if item is None:
                     cls.insert(session=session, item=entry, as_dict=True)
                 else:
@@ -330,13 +330,13 @@ class BaseTableSchema:
         statement = cls.create_find_column_value_statement(key, entry[key])
         if begin:
             async with session.begin():
-                item = (await session.execute(statement)).scalar()
+                item = await (await session.stream(statement)).scalar()
                 if item is None:
                     await cls.insert_async(session=session, item=entry, as_dict=True)
                 else:
                     item.update(entry)
         else:
-            item = (await session.execute(statement)).scalar()
+            item = await (await session.stream(statement)).scalar()
             if item is None:
                 await cls.insert_async(session=session, item=entry, as_dict=True)
             else:
@@ -423,10 +423,9 @@ class BaseTableSchema:
         if begin:
             async with session.begin():
                 # Find all items to update
-                items = await session.execute(find_statement)
+                items = [i async for i in (await session.stream(find_statement)).scalars()]
 
                 # Update found items and remove them from dict
-                items = list(items.scalars())
                 for item, value in zip(items, await gather(*(getattr(i.awaitable_attrs, key) for i in items))):
                     item.update(entry_dict.pop(value))
 
@@ -434,10 +433,9 @@ class BaseTableSchema:
                 await cls.insert_all_async(session, chain(entry_dict.values(), entry_dequed), as_dict=True)
         else:
             # Find all items to update
-            items = await session.execute(find_statement)
+            items = [i async for i in (await session.stream(find_statement)).scalars()]
 
             # Update found items and remove them from dict
-            items = list(items.scalars())
             for item, value in zip(items, await gather(*(getattr(i.awaitable_attrs, key) for i in items))):
                 item.update(entry_dict.pop(value))
 
@@ -496,11 +494,11 @@ class BaseTableSchema:
         Returns:
             Result | list[dict[str, Any]]: The result of the query, either as a Result object or as a list of dictionaries.
         """
-        results = session.execute(lambda_stmt(lambda: select(cls)))
-        return [r.as_python_dict() for r in results.scalars()] if as_python else results
+        result = session.execute(lambda_stmt(lambda: select(cls)))
+        return [r.as_python_dict() for r in result.all()] if as_python else result
 
     @classmethod
-    async def get_all_async(cls, session: AsyncSession, as_python: bool = False) -> Result | list[dict[str, Any]]:
+    async def get_all_async(cls, session: AsyncSession, as_python: bool = False) -> AsyncResult | list[dict[str, Any]]:
         """Asynchronously, fetches all entries from the table.
 
         Args:
@@ -510,8 +508,8 @@ class BaseTableSchema:
         Returns:
             Result | list[dict[str, Any]]: The result of the query, either as a Result object or as a list of dictionaries.
         """
-        result = await session.execute(lambda_stmt(lambda: select(cls)))
-        return await gather(*(r.as_python_dict_async() for r in result.scalars())) if as_python else result
+        result = await session.stream(lambda_stmt(lambda: select(cls)))
+        return await gather(*[r.as_python_dict_async() async for r in result.scalars()]) if as_python else result
 
     # Instance Methods #
     def update(
@@ -997,7 +995,7 @@ class TableManifestation(BaseReducible):
         self,
         session: AsyncSession | None = None,
         as_python: bool = False,
-    ) -> Result | list[dict[str, Any]]:
+    ) -> AsyncResult | list[dict[str, Any]]:
         """Asynchronously, fetches all entries from the table.
 
         Args:

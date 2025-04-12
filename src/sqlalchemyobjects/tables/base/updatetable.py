@@ -13,6 +13,7 @@ __email__ = __email__
 
 # Imports #
 # Standard Libraries #
+from asyncio import gather
 from typing import Any
 
 # Third-Party Packages #
@@ -57,7 +58,7 @@ class BaseUpdateTableSchema(BaseTableSchema):
         Returns:
             int | None: The last update ID, or None if no updates exist.
         """
-        return session.execute(lambda_stmt(lambda: select(func.max(cls.update_id)))).one_or_none()[0]
+        return session.execute(lambda_stmt(lambda: select(func.max(cls.update_id)))).scalar()
 
     @classmethod
     async def get_last_update_id_async(cls, session: AsyncSession) -> int | None:
@@ -69,7 +70,7 @@ class BaseUpdateTableSchema(BaseTableSchema):
         Returns:
             int | None: The last update ID, or None if no updates exist.
         """
-        return (await session.execute(lambda_stmt(lambda: select(func.max(cls.update_id))))).one_or_none()[0]
+        return (await session.execute(lambda_stmt(lambda: select(func.max(cls.update_id))))).scalar()
 
     @classmethod
     def get_from_update(
@@ -77,7 +78,7 @@ class BaseUpdateTableSchema(BaseTableSchema):
         session: Session,
         update_id: int,
         inclusive: bool = True,
-        as_entries: bool = False,
+        as_python: bool = False,
     ) -> Result | list[dict[str, Any]]:
         """Gets entries from the table based on the update ID.
 
@@ -85,7 +86,7 @@ class BaseUpdateTableSchema(BaseTableSchema):
             session: The SQLAlchemy session to use for the query.
             update_id: The update ID to filter by.
             inclusive: If True, includes entries with the specified update ID. Defaults to True.
-            as_entries: If True, returns a list of dictionaries representing the entries; otherwise, returns a Result.
+            as_python: If True, returns a list of dictionaries representing the entries; otherwise, returns a Result.
 
         Returns:
             Result | list[dict[str, Any]]: The result of the query, either as a Result object or as a list of dictionaries.
@@ -96,8 +97,8 @@ class BaseUpdateTableSchema(BaseTableSchema):
         else:
             update_statement += lambda s: s.where(cls.update_id > update_id)
 
-        results = session.execute(update_statement)
-        return [r.as_entry() for r in results.scalars()] if as_entries else results
+        result = session.execute(update_statement)
+        return [r.as_python_dict() for r in result.scalars()] if as_python else result
 
     @classmethod
     async def get_from_update_async(
@@ -105,15 +106,15 @@ class BaseUpdateTableSchema(BaseTableSchema):
         session: AsyncSession,
         update_id: int,
         inclusive: bool = True,
-        as_entries: bool = False,
+        as_python: bool = False,
     ) -> Result | list[dict[str, Any]]:
-        """Gets entries from the table based on the update ID asynchronously.
+        """Asynchronously gets entries from the table based on the update ID.
 
         Args:
             session: The SQLAlchemy async session to use for the query.
             update_id: The update ID to filter by.
             inclusive: If True, includes entries with the specified update ID. Defaults to True.
-            as_entries: If True, returns a list of dictionaries representing the entries; otherwise, returns a Result.
+            as_python: If True, returns a list of dictionaries representing the entries; otherwise, returns a Result.
 
         Returns:
             Result | list[dict[str, Any]]: The result of the query, either as a Result object or as a list of dictionaries.
@@ -124,8 +125,8 @@ class BaseUpdateTableSchema(BaseTableSchema):
         else:
             update_statement += lambda s: s.where(cls.update_id > update_id)
 
-        results = await session.execute(update_statement)
-        return [r.as_entry() for r in results.scalars()] if as_entries else results
+        result = await session.execute(update_statement)
+        return await gather(*(r.as_python_dict_async() for r in result.scalars())) if as_python else result
 
 
 class UpdateTableManifestation(TableManifestation):
@@ -179,45 +180,45 @@ class UpdateTableManifestation(TableManifestation):
         update_id: int,
         session: Session | None = None,
         inclusive: bool = True,
-        as_entries: bool = False,
+        as_python: bool = False,
     ) -> Result | list[dict[str, Any]]:
         """Gets entries from the table based on the update ID.
 
         Args:
-            update_id: The update ID to filter entries.
-            session: The SQLAlchemy session to use for the query. Defaults to None.
-            inclusive: If True, includes the entry with the given update ID. Defaults to True.
-            as_entries: If True, returns a list of dictionaries representing the entries; otherwise, returns a Result.
+            session: The SQLAlchemy session to use for the query.
+            update_id: The update ID to filter by.
+            inclusive: If True, includes entries with the specified update ID. Defaults to True.
+            as_python: If True, returns a list of dictionaries representing the entries; otherwise, returns a Result.
 
         Returns:
             Result | list[dict[str, Any]]: The result of the query, either as a Result object or as a list of dictionaries.
         """
         if session is not None:
-            return self.table_schema.get_from_update(session, update_id, inclusive, as_entries)
+            return self.table_schema.get_from_update(session, update_id, inclusive, as_python)
         else:
             with self.create_session() as session:
-                return self.table_schema.get_from_update(session, update_id, inclusive, as_entries)
+                return self.table_schema.get_from_update(session, update_id, inclusive, as_python)
 
     async def get_from_update_async(
         self,
         update_id: int,
         session: AsyncSession | None = None,
         inclusive: bool = True,
-        as_entries: bool = False,
+        as_python: bool = False,
     ) -> Result | list[dict[str, Any]]:
         """Asynchronously gets entries from the table based on the update ID.
 
         Args:
-            update_id: The update ID to filter entries.
-            session: The SQLAlchemy session to use for the query. Defaults to None.
-            inclusive: If True, includes the entry with the given update ID. Defaults to True.
-            as_entries: If True, returns a list of dictionaries representing the entries; otherwise, returns a Result.
+            session: The SQLAlchemy async session to use for the query.
+            update_id: The update ID to filter by.
+            inclusive: If True, includes entries with the specified update ID. Defaults to True.
+            as_python: If True, returns a list of dictionaries representing the entries; otherwise, returns a Result.
 
         Returns:
             Result | list[dict[str, Any]]: The result of the query, either as a Result object or as a list of dictionaries.
         """
         if session is not None:
-            return await self.table_schema.get_from_update_async(session, update_id, inclusive, as_entries)
+            return await self.table_schema.get_from_update_async(session, update_id, inclusive, as_python)
         else:
             async with self.create_async_session() as session:
-                return await self.table_schema.get_from_update_async(session, update_id, inclusive, as_entries)
+                return await self.table_schema.get_from_update_async(session, update_id, inclusive, as_python)
