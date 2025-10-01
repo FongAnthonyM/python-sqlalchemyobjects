@@ -296,7 +296,7 @@ class BaseTableSchema:
         statement = cls.create_find_column_value_statement(key, entry[key])
         if begin:
             with session.begin():
-                item = session.execute(statement).row()
+                item = session.execute(statement).scalar()
                 if item is None:
                     cls.insert(session=session, item=entry, as_dict=True)
                 else:
@@ -330,17 +330,17 @@ class BaseTableSchema:
         statement = cls.create_find_column_value_statement(key, entry[key])
         if begin:
             async with session.begin():
-                item = await (await session.stream(statement)).scalar()
-                if item is None:
-                    await cls.insert_async(session=session, item=entry, as_dict=True)
+                items = await (await session.stream(statement)).scalars().all()
+                if items:
+                    items[0].update(entry)
                 else:
-                    item.update(entry)
+                    await cls.insert_async(session=session, item=entry, as_dict=True)
         else:
-            item = await (await session.stream(statement)).scalar()
-            if item is None:
-                await cls.insert_async(session=session, item=entry, as_dict=True)
+            items = await (await session.stream(statement)).scalars().all()
+            if items:
+                items[0].update(entry)
             else:
-                item.update(entry)
+                await cls.insert_async(session=session, item=entry, as_dict=True)
 
     @classmethod
     def upsert_entries(
