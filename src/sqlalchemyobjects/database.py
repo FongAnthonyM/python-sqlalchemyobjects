@@ -102,7 +102,7 @@ class Database(BaseReducible):
         Returns:
             bool: True if the database is open, False otherwise.
         """
-        return self._engine is not None and self._async_engine is not None
+        return self._engine is not None or self._async_engine is not None
 
     # Magic Methods #
     # Construction/Destruction
@@ -113,6 +113,7 @@ class Database(BaseReducible):
         table_map: dict[str, tuple[type[TableManifestation], type[DeclarativeBase], dict[str, Any]]] | None = None,
         open_: bool = False,
         create: bool = False,
+        async_: bool = True,
         *,
         init: bool = True,
         **kwargs,
@@ -133,6 +134,7 @@ class Database(BaseReducible):
                 table_map,
                 open_,
                 create,
+                async_,
                 **kwargs,
             )
 
@@ -186,6 +188,7 @@ class Database(BaseReducible):
         table_map: dict[str, tuple[type[TableManifestation], type[DeclarativeBase], dict[str, Any]]] | None = None,
         open_: bool = False,
         create: bool = False,
+        async_: bool = True,
         **kwargs,
     ) -> None:
         """Constructs the Database object.
@@ -196,6 +199,7 @@ class Database(BaseReducible):
             table_map: A map which outlines which table are within this database.
             open_: Whether to open the database. Defaults to False.
             create: Whether to create the database. Defaults to False.
+            async_: Whether to create an async engine. Defaults to True.
             **kwargs: Additional keyword arguments.
         """
         if path is not None:
@@ -210,9 +214,9 @@ class Database(BaseReducible):
         self.manifest_tables()
 
         if create:
-            self.create_database()
+            self.create_database(async_=async_)
         elif open_:
-            self.open(**kwargs)
+            self.open(async_=async_, **kwargs)
 
         if create and not open_:
             self.close()
@@ -220,12 +224,13 @@ class Database(BaseReducible):
         super().construct()
 
     # Engine
-    def create_engine(self, path: Path | None = None, url: str | None = None, **kwargs) -> None:
+    def create_engine(self, path: Path | None = None, url: str | None = None, async_: bool = True, **kwargs) -> None:
         """Creates the SQLAlchemy engine.
 
         Args:
             path: The path to the database.
             url: The URL to the database.
+            async_: Whether to create an async engine. Defaults to True.
             **kwargs: Additional keyword arguments.
         """
         if url is None:
@@ -237,7 +242,8 @@ class Database(BaseReducible):
             location_async = url.replace("sqlite", "sqlite+aiosqlite")
 
         self._engine = create_engine(location, **kwargs)
-        self._async_engine = create_async_engine(location_async, **kwargs)
+        if async_:
+            self._async_engine = create_async_engine(location_async, **kwargs)
 
     # Database
     def create_database(self, path: str | pathlib.Path | None = None, **kwargs) -> None:
