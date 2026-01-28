@@ -1,13 +1,14 @@
-Reference
-=========
+API Reference
+=============
 
 .. contents::
     :local:
+    :depth: 2
     :backlinks: none
 
 
-sqlalchemyobjects.__main__
---------------------
+sqlalchemyobjects
+---------------------------
 
-.. automodule:: sqlalchemyobjects.__main__
+.. automodule:: sqlalchemyobjects
    :members:

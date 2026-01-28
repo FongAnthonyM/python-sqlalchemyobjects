@@ -1,14 +1,16 @@
-""" __init__.py
-
+"""__init__.py
+Package initialization for sqlalchemyobjects.
 """
-# Package Header #
-from .header import *
 
 # Header #
-__author__ = __author__
-__credits__ = __credits__
-__maintainer__ = __maintainer__
-__email__ = __email__
+__package_name__ = "sqlalchemyobjects"
+
+__author__ = "Anthony Fong"
+__credits__ = ["Anthony Fong"]
+__copyright__ = "Copyright 2026, Anthony Fong"
+__license__ = "MIT"
+
+__version__ = "0.1.0"
 
 
 # Imports #

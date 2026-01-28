@@ -1,6 +1,11 @@
-""" header.py
+"""header.py
 Information about this package.
+
+This module contains metadata about the sqlalchemyobjects package, including version information, author details, and
+licensing information. It serves as a central location for package metadata that can be imported and used by other
+modules in the package.
 """
+
 # Header #
 __package_name__ = "sqlalchemyobjects"
 
@@ -9,20 +14,20 @@ __credits__ = ["Anthony Fong"]
 __maintainer__ = "Anthony Fong"
 __email__ = ""
 
-__copyright__ = "Copyright 2024, Anthony Fong"
+__copyright__ = "Copyright 2026, Anthony Fong"
 __license__ = "MIT"
 
 __version__ = "0.1.0"
-__status__ = " Planning"
+__status__ = "Development Status :: 1 - Planning"
 
 __all__ = [
-    "__package_name__",
     "__author__",
-    "__credits__",
-    "__maintainer__",
-    "__email__",
     "__copyright__",
+    "__credits__",
+    "__email__",
     "__license__",
-    "__version__",
+    "__maintainer__",
+    "__package_name__",
     "__status__",
+    "__version__",
 ]
