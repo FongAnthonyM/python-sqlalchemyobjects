@@ -79,16 +79,10 @@ class Database(BaseReducible):
         _backend: The SQLAlchemy engine backend.
         _async_backend: The SQLAlchemy engine async backend.
         _path: The file path to the database.
-        url: The URL to the database.
         _engine: The SQLAlchemy engine for synchronous operations.
         _async_engine: The SQLAlchemy engine for asynchronous operations.
-        session_maker_kwargs: Keyword arguments for the synchronous session maker.
         _session_maker: Factory for creating synchronous sessions.
-        async_session_maker_kwargs: Keyword arguments for the asynchronous session maker.
         _async_session_maker: Factory for creating asynchronous sessions.
-        schema: The database schema class.
-        table_map: A map which outlines which table are within this database.
-        tables: A dictionary of tables within this database.
     """
 
     # Attributes #

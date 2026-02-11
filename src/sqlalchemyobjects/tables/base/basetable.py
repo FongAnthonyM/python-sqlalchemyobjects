@@ -51,7 +51,6 @@ class BaseTableSchema:
 
     Attributes:
         __tablename__: The name of the table.
-        id: The primary key column of the table, using UUIDs.
     """
 
     # Class Attributes #
@@ -754,7 +753,6 @@ class TableManifestation(BaseReducible):
 
     Attributes:
         _database: A weak reference to the SQAlchemy database to interface with.
-        table_schema: The SQLAlchemy declarative table which this object act as the interface for.
     """
 
     # Attributes #
@@ -1106,7 +1104,7 @@ class TableManifestation(BaseReducible):
         Args:
             entries: A list of dictionaries representing the entries to update. Defaults to None.
             session: The SQLAlchemy async session to use for the operation.
-            key: The key (column name) to search by. Defaults to "id_".
+            key: The key (column name) to search by. Defaults to ``"id"``.
             begin: If True, begins a transaction for the operation. Defaults to False.
         """
         if session is not None:

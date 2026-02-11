@@ -169,7 +169,6 @@ class MetaInformationTableManifestation(SingletonTableManifestation):
 
     Attributes:
         _database: A weak reference to the SQAlchemy database to interface with.
-        table_schema: The SQLAlchemy declarative table which this object act as the interface for.
         _meta_information: Cached meta-information.
     """
 

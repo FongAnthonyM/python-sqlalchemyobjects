@@ -39,8 +39,6 @@ class BaseUpdateTableSchema(BaseTableSchema):
 
     Attributes:
         __tablename__: The name of the table.
-        id: The primary key column of the table, using UUIDs.
-        update_id: A column to track updates, using big integers.
     """
 
     # Class Attributes #
@@ -136,7 +134,6 @@ class UpdateTableManifestation(TableManifestation):
 
     Attributes:
         _database: A weak reference to the SQAlchemy database to interface with.
-        table_schema: The SQLAlchemy declarative table which this object act as the interface for.
     """
 
     # Attributes #
