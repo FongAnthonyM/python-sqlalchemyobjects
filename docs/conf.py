@@ -47,6 +47,7 @@ napoleon_attr_annotations = True
 # Intersphinx
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
+    "sqlalchemy": ("https://docs.sqlalchemy.org/en/20/", None),
 }
 
 # HTML output

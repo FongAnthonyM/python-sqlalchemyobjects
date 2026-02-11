@@ -1,5 +1,5 @@
 """__init__.py
-Examples for the sqlalchemyobjects package.
+Tests for the tables subpackage.
 """
 
 # Header #

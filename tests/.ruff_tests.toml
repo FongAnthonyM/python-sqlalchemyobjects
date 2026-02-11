@@ -78,6 +78,11 @@ ignore = [
     "D415",  # The first line must end with a period
     "F401",  # All imports must be used
     "F403",  # Disallow wildcard imports (from module import *)
+    "F405",  # Disallow names defined from star imports
+    "PT028",  # Test function parameter has default argument
+    "PT011",  # pytest.raises() is too broad
+    "RUF012",  # Multable class attriubes must be annotated with ClassVar
+    "RUF067",  # Disallow content in __init__ (false positive for metadata)
 ]
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]

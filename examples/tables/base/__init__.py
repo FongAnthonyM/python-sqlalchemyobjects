@@ -1,5 +1,5 @@
 """__init__.py
-Examples for the sqlalchemyobjects package.
+ExampleDatabaseSchema table examples for the sqlalchemyobjects package.
 """
 
 # Header #

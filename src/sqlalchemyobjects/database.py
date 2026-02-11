@@ -1,29 +1,36 @@
 """database.py
 Manages the database including creating, opening, and modifying the database.
+
+This module contains the Database class, which is a wrapper around SQLAlchemy's Engine and Session objects. It provides
+a convenient interface for managing the database, including creating the database, opening connections, and managing
+sessions.
 """
-# Package Header #
-from .header import *
 
 # Header #
-__author__ = __author__
-__credits__ = __credits__
-__maintainer__ = __maintainer__
-__email__ = __email__
+__package_name__ = "sqlalchemyobjects"
+
+__author__ = "Anthony Fong"
+__credits__ = ["Anthony Fong"]
+__copyright__ = "Copyright 2026, Anthony Fong"
+__license__ = "MIT"
+
+__version__ = "0.1.0"
 
 
 # Imports #
 # Standard Libraries #
+import asyncio
 from asyncio import run
 from collections.abc import Iterable
-import pathlib
+from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 # Third-Party Packages #
 from baseobjects import BaseReducible
-from sqlalchemy import create_engine, Engine
+from sqlalchemy import Engine, create_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine, async_sessionmaker
 
 # Local Packages #
 from .tables import TableManifestation
@@ -31,10 +38,46 @@ from .tables import TableManifestation
 
 # Definitions #
 # Classes #
+class SQLAlchemyBackends(StrEnum):
+    """SQLAlchemy Engine Backends."""
+
+    SQLITE = "sqlite://"
+    POSTGRESQL = "postgresql://"
+    POSTGRESQL_PSYCOPG2 = "postgresql+psycopg2://"
+    POSTGRESQL_PG8000 = "postgresql+pg8000://"
+    MYSQL = "mysql://"
+    MYSQL_MYSQLDB = "mysql+mysqldb://"
+    MYSQL_PYMYSQL = "mysql+pymysql://"
+    ORACLE = "oracle+oracledb://"
+    MSSQL = "mssql+pyodbc://"
+
+
+class SQLAlchemyAsyncBackends(StrEnum):
+    """SQLAlchemy Engine Async Backends."""
+
+    SQLITE = "sqlite+aiosqlite://"
+    POSTGRESQL = "postgresql+asyncpg://"
+    POSTGRESQL_PSYCOPG2 = "postgresql+asyncpg://"
+    MYSQL = "mysql+aiomysql://"
+    MYSQL_MYSQLDB = "mysql+aiomysql://"
+    ORACLE = "oracle+oracledb://"
+
+
+class SQLiteModes(StrEnum):
+    """SQLite URI Mode Strings."""
+
+    RO = "ro"
+    RW = "rw"
+    RWC = "rwc"
+    MEMORY = "memory"
+
+
 class Database(BaseReducible):
     """Manages the database including creating, opening, and modifying the database.
 
     Attributes:
+        _backend: The SQLAlchemy engine backend.
+        _async_backend: The SQLAlchemy engine async backend.
         _path: The file path to the database.
         url: The URL to the database.
         _engine: The SQLAlchemy engine for synchronous operations.
@@ -46,28 +89,23 @@ class Database(BaseReducible):
         schema: The database schema class.
         table_map: A map which outlines which table are within this database.
         tables: A dictionary of tables within this database.
-
-    Args:
-        path: The path to the database file.
-        schema: The database schema class.
-        table_map: A map which outlines which table are within this database.
-        open_: Whether to open the database. Defaults to False.
-        create: Whether to create the database. Defaults to False.
-        init: Whether to initialize the object.
-        **kwargs: Additional keyword arguments.
     """
+
     # Attributes #
+    _backend: SQLAlchemyBackends = SQLAlchemyBackends.SQLITE
+    _async_backend: SQLAlchemyAsyncBackends = SQLAlchemyAsyncBackends.SQLITE
     _path: Path | None = None
     url: str | None = None
+    _mode: SQLiteModes = SQLiteModes.RWC
 
     _engine: Engine | None = None
     _async_engine: AsyncEngine | None = None
 
     session_maker_kwargs: dict[str, Any] = {}
-    _session_maker: sessionmaker | None = None
+    _session_maker: sessionmaker[Session] | None = None
 
     async_session_maker_kwargs: dict[str, Any] = {}
-    _async_session_maker: async_sessionmaker | None = None
+    _async_session_maker: async_sessionmaker[AsyncSession] | None = None
 
     schema: type[DeclarativeBase] | None = None
     table_map: dict[str, tuple[type[TableManifestation], type[DeclarativeBase], dict[str, Any]]] = {}
@@ -75,34 +113,144 @@ class Database(BaseReducible):
 
     # Properties #
     @property
-    def path(self) -> Path:
-        """The path to the database file.
+    def backend(self) -> str:
+        """The SQLAlchemy engine backend."""
+        return self._backend.value
 
-        Returns:
-            pathlib.Path: The path to the database file.
-        """
+    @backend.setter
+    def backend(self, value: SQLAlchemyBackends | str) -> None:
+        """Sets the SQLAlchemy engine backend."""
+        self._backend = SQLAlchemyBackends(value) if isinstance(value, str) else value
+
+    @property
+    def async_backend(self) -> str:
+        """The SQLAlchemy engine async backend."""
+        return self._async_backend.value
+
+    @async_backend.setter
+    def async_backend(self, value: SQLAlchemyAsyncBackends | str) -> None:
+        """Sets the SQLAlchemy engine async backend."""
+        self._async_backend = SQLAlchemyAsyncBackends(value) if isinstance(value, str) else value
+
+    @property
+    def path(self) -> Path | None:
+        """The path to the database file."""
         return self._path
 
     @path.setter
-    def path(self, value: str | Path) -> None:
+    def path(self, value: str | Path | None) -> None:
         """Sets the path to the database file.
 
         Args:
             value: The new path to the database file.
         """
-        if isinstance(value, pathlib.Path) or value is None:
+        if isinstance(value, Path) or value is None:
             self._path = value
         else:
-            self._path = pathlib.Path(value)
+            self._path = Path(value)
+
+    @property
+    def mode(self) -> str:
+        """The mode to use for the database."""
+        return self._mode.value
+
+    @mode.setter
+    def mode(self, value: SQLiteModes | str) -> None:
+        """Sets the mode to use for the database.
+
+        Raises:
+            ValueError: If the database is open.
+        """
+        if self.is_open:
+            msg = "Cannot change mode while the database is open. Close the database first."
+            raise ValueError(msg)
+        self._mode = SQLiteModes(value) if isinstance(value, str) else value
+
+    @property
+    def full_url(self) -> str:
+        """The full URL to the database.
+
+        Raises:
+            ValueError: If both path and URL are set, or if the backend is unsupported for path, or if path is not set.
+        """
+        if self._path is not None and self.url is not None:
+            msg = "Cannot have both a path and a URL"
+            raise ValueError(msg)
+        if self._path is not None:
+            if self._backend == SQLAlchemyBackends.SQLITE:
+                url = self._path.as_posix()
+            else:
+                msg = f"Unsupported backend for path: {self._backend}"
+                raise ValueError(msg)
+        elif self.url is not None:
+            url = self.url
+        else:
+            msg = "Path is not set"
+            raise ValueError(msg)
+
+        if self._backend == SQLAlchemyBackends.SQLITE:
+            if "mode=" not in url:
+                url = f"{url}{'&' if '?' in url else '?'}mode={self._mode.value}"
+
+            if "://" not in url:
+                if not url.startswith("/"):
+                    url = "/" + url
+                return self._backend.value + url
+
+        if "://" in url:
+            if url.startswith(self._async_backend.value):
+                return url.replace(self._async_backend.value, self._backend.value, 1)
+            return url
+        else:
+            return self._backend.value + url
+
+    @property
+    def async_full_url(self) -> str:
+        """The full URL to the database for the async engine.
+
+        Raises:
+            ValueError: If both path and URL are set, or if the backend is unsupported for path, or if path is not set.
+        """
+        if self._path is not None and self.url is not None:
+            msg = "Cannot have both a path and a URL"
+            raise ValueError(msg)
+        if self._path is not None:
+            if self._async_backend == SQLAlchemyAsyncBackends.SQLITE:
+                url = self._path.as_posix()
+            else:
+                msg = f"Unsupported backend for path: {self._async_backend}"
+                raise ValueError(msg)
+        elif self.url is not None:
+            url = self.url
+        else:
+            msg = "Path is not set"
+            raise ValueError(msg)
+
+        if self._async_backend == SQLAlchemyAsyncBackends.SQLITE:
+            if "mode=" not in url:
+                url = f"{url}{'&' if '?' in url else '?'}mode={self._mode.value}"
+
+            if "://" not in url:
+                if not url.startswith("/"):
+                    url = "/" + url
+                return self._async_backend.value + url
+
+        if "://" in url:
+            if url.startswith(self._backend.value) and not url.startswith(self._async_backend.value):
+                return url.replace(self._backend.value, self._async_backend.value, 1)
+            return url
+        else:
+            return self._async_backend.value + url
 
     @property
     def is_open(self) -> bool:
-        """Checks if the database is open.
+        """Checks if the database is open."""
+        return self._engine is not None or self._async_engine is not None
 
-        Returns:
-            bool: True if the database is open, False otherwise.
-        """
-        return self._engine is not None and self._async_engine is not None
+    @property
+    def is_async(self) -> bool:
+        """Checks if the asynchronous engine is available."""
+        return self._async_engine is not None
 
     # Magic Methods #
     # Construction/Destruction
@@ -112,11 +260,26 @@ class Database(BaseReducible):
         schema: type[DeclarativeBase] | None = None,
         table_map: dict[str, tuple[type[TableManifestation], type[DeclarativeBase], dict[str, Any]]] | None = None,
         open_: bool = False,
+        mode: SQLiteModes | str | None = None,
         create: bool = False,
+        async_engine: bool = False,
         *,
         init: bool = True,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
+        """Initializes the Database object.
+
+        Args:
+            path: The path to the database file.
+            schema: The database schema class.
+            table_map: A map which outlines which table are within this database.
+            open_: Whether to open the database. Defaults to False.
+            create: Whether to create the database. Defaults to False.
+            mode: When the database is SQLite, the mode to use. Defaults to None.
+            async_engine: Whether to create an asynchronous engine. Defaults to False.
+            init: Whether to initialize the object.
+            **kwargs: Additional keyword arguments.
+        """
         # New Attributes #
         self.tables = {}
         self.session_maker_kwargs = self.session_maker_kwargs.copy()
@@ -132,12 +295,14 @@ class Database(BaseReducible):
                 schema,
                 table_map,
                 open_,
+                mode,
                 create,
+                async_engine=async_engine,
                 **kwargs,
             )
 
     # Pickling
-    def __getstate__(self) -> dict[str, Any]:
+    def __getstate__(self) -> dict[str, Any] | tuple[dict[str, Any] | None, dict[str, Any]] | None:
         """Gets the object's state for pickling.
 
         Returns:
@@ -148,10 +313,12 @@ class Database(BaseReducible):
                 tuple[dict, dict]: __dict__ is present and __slots__ is present.
         """
         state = super().__getstate__()
-        state["is_open"] = self.is_open
-        for name in ("_engine", "_async_engine", "_session_maker", "_async_session_maker"):
-            if name in state:
-                del state[name]
+        if isinstance(state, dict):
+            state["is_open"] = self.is_open
+            state["is_async"] = self.is_async
+            for name in ("_engine", "_async_engine", "_session_maker", "_async_session_maker"):
+                if name in state:
+                    del state[name]
         return state
 
     def __setstate__(self, state: Any) -> None:
@@ -168,25 +335,60 @@ class Database(BaseReducible):
             state: An object which can be used to set the state of this object.
         """
         # Remove "open" attribute
-        was_open = state.pop("is_open")
+        was_open = False
+        was_async = False
+        if isinstance(state, dict):
+            was_open = state.pop("is_open", False)
+            was_async = state.pop("is_async", False)
 
         # Set State
         super().__setstate__(state)
 
         # Open the File if it was open
         if was_open:
+            self.open(async_engine=was_async)
+
+    # Context Managers
+    def __enter__(self) -> Self:
+        """Enters the context manager.
+
+        Returns:
+            The database object.
+        """
+        if not self.is_open:
             self.open()
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Exits the context manager."""
+        self.close()
+
+    async def __aenter__(self) -> Self:
+        """Enters the asynchronous context manager.
+
+        Returns:
+            The database object.
+        """
+        if not self.is_open or self._async_engine is None:
+            self.open(async_engine=True)
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Exits the asynchronous context manager."""
+        await self.close_async()
 
     # Instance Methods #
     # Constructors/Destructors
     def construct(
         self,
-        path: str | pathlib.Path | None = None,
+        path: str | Path | None = None,
         schema: type[DeclarativeBase] | None = None,
         table_map: dict[str, tuple[type[TableManifestation], type[DeclarativeBase], dict[str, Any]]] | None = None,
         open_: bool = False,
+        mode: SQLiteModes | str | None = None,
         create: bool = False,
-        **kwargs,
+        async_engine: bool = False,
+        **kwargs: Any,
     ) -> None:
         """Constructs the Database object.
 
@@ -195,11 +397,16 @@ class Database(BaseReducible):
             schema: The database schema class.
             table_map: A map which outlines which table are within this database.
             open_: Whether to open the database. Defaults to False.
+            mode: When the database is SQLite, the mode to use. Defaults to None.
             create: Whether to create the database. Defaults to False.
+            async_engine: Whether to create an asynchronous engine. Defaults to False.
             **kwargs: Additional keyword arguments.
         """
         if path is not None:
             self.path = path
+
+        if mode is not None:
+            self.mode = mode
 
         if schema is not None:
             self.schema = schema
@@ -210,9 +417,9 @@ class Database(BaseReducible):
         self.manifest_tables()
 
         if create:
-            self.create_database()
+            self.create_database(async_engine=async_engine, **kwargs)
         elif open_:
-            self.open(**kwargs)
+            self.open(async_engine=async_engine, **kwargs)
 
         if create and not open_:
             self.close()
@@ -220,96 +427,153 @@ class Database(BaseReducible):
         super().construct()
 
     # Engine
-    def create_engine(self, path: Path | None = None, url: str | None = None, **kwargs) -> None:
+    def create_engine(
+        self,
+        path: Path | None = None,
+        url: str | None = None,
+        mode: SQLiteModes | str | None = None,
+        async_engine: bool = False,
+        **kwargs: Any,
+    ) -> None:
         """Creates the SQLAlchemy engine.
 
         Args:
             path: The path to the database.
             url: The URL to the database.
+            mode: When the database is SQLite, the mode to use. Defaults to None.
+            async_engine: Whether to create an asynchronous engine. Defaults to False.
             **kwargs: Additional keyword arguments.
         """
-        if url is None:
-            path_str = path.as_posix() if path else self._path.as_posix()
-            location = f"sqlite:///{path_str}"
-            location_async = f"sqlite+aiosqlite:///{path_str}"
-        else:
-            location = url
-            location_async = url.replace("sqlite", "sqlite+aiosqlite")
+        if mode is not None:
+            self.mode = mode
 
-        self._engine = create_engine(location, **kwargs)
-        self._async_engine = create_async_engine(location_async, **kwargs)
+        if url is not None:
+            self.url = url
+            self.path = None
+        elif path is not None:
+            self.path = path
+            self.url = None
+
+        if self._path is not None and (
+            self._backend == SQLAlchemyBackends.SQLITE or self._async_backend == SQLAlchemyAsyncBackends.SQLITE
+        ):
+            self._path.parent.mkdir(parents=True, exist_ok=True)
+
+        self._engine = create_engine(self.full_url, **kwargs)
+        self._async_engine = create_async_engine(self.async_full_url, **kwargs) if async_engine else None
 
     # Database
-    def create_database(self, path: str | pathlib.Path | None = None, **kwargs) -> None:
+    def create_database(
+        self,
+        path: str | Path | None = None,
+        mode: SQLiteModes | str | None = None,
+        async_engine: bool = False,
+        **kwargs: Any,
+    ) -> None:
         """Creates the database.
 
         Args:
             path: The path to the database.
+            mode: When the database is SQLite, the mode to use. Defaults to None.
+            async_engine: Whether to create an asynchronous engine. Defaults to False.
             **kwargs: Additional keyword arguments.
         """
-        if path is not None:
+        if path is not None and path != self._path:
             self.path = path
+            if self._engine is not None:
+                self.close()
 
-        if self._engine is None or path is not None:
-            self.create_engine(**kwargs)
+        if self._engine is None:
+            self.create_engine(mode=mode, async_engine=async_engine, **kwargs)
             self.build_session_maker()
-            self.build_async_session_maker()
+            if self._async_engine is not None:
+                self.build_async_session_maker()
 
-        self.schema.metadata.create_all(self._engine)
+        if self.schema is not None and self._engine is not None:
+            self.schema.metadata.create_all(self._engine)
 
-    async def create_database_async(self, path: str | pathlib.Path | None = None, **kwargs) -> None:
+    async def create_database_async(self, path: str | Path | None = None, **kwargs: Any) -> None:
         """Asynchronously creates the database.
 
         Args:
             path: The path to the database.
             **kwargs: Additional keyword arguments.
         """
-        if path is not None:
+        if path is not None and path != self._path:
             self.path = path
+            if self._engine or self._async_engine is not None:
+                await self.close_async()
 
-        if self._async_engine is None or path is not None:
-            self.create_engine(**kwargs)
+        if self._async_engine is None:
+            self.create_engine(async_engine=True, **kwargs)
             self.build_session_maker()
             self.build_async_session_maker()
 
-        async with self._async_engine.begin() as conn:
-            await conn.run_sync(self.schema.metadata.create_all)
+        if self._async_engine is not None and self.schema is not None:
+            async with self._async_engine.begin() as conn:
+                await conn.run_sync(self.schema.metadata.create_all)
 
-    def open(self, **kwargs: Any) -> "Database":
+    def open(self, mode: SQLiteModes | str | None = None, async_engine: bool = False, **kwargs: Any) -> Database:
         """Opens the database.
 
         Args:
+            mode: When the database is SQLite, the mode to use. Defaults to None.
+            async_engine: Whether to create an asynchronous engine. Defaults to False.
             **kwargs: Additional keyword arguments.
 
         Returns:
-            Database: The opened database.
+            The opened database.
         """
-        self.create_engine(**kwargs)
+        if (not async_engine and self._engine is not None) or (async_engine and self._async_engine is not None):
+            return self
+
+        self.create_engine(mode=mode, async_engine=async_engine, **kwargs)
         self.build_session_maker()
-        self.build_async_session_maker()
+        if self._async_engine is not None:
+            self.build_async_session_maker()
         return self
 
     def close(self) -> bool:
         """Closes the database.
 
         Returns:
-            bool: True if the database is closed, False otherwise.
+            True if the database is closed, False otherwise.
         """
         if self._engine is not None:
             self._engine.dispose()
             self._engine = None
         self._session_maker = None
         if self._async_engine is not None:
-            self._async_engine.dispose()
+            coro = self._async_engine.dispose()
+            try:
+                run(coro)
+            except RuntimeError:
+                try:
+                    loop = asyncio.get_running_loop()
+                    if loop.is_running():
+                        task = loop.create_task(coro)
+                        # We don't want to wait for the task to complete here, as this is the synchronous close method.
+                        # However, we should keep a reference to it to avoid it being garbage collected.
+                        if not hasattr(self, "_closing_tasks"):
+                            self._closing_tasks = set()
+                        self._closing_tasks.add(task)
+                        task.add_done_callback(self._closing_tasks.discard)
+                    else:
+                        coro.close()
+                except RuntimeError:
+                    coro.close()
+            except Exception:
+                coro.close()
+                raise
             self._async_engine = None
         self._async_session_maker = None
-        return self._engine is None
+        return self._engine is None and self._async_engine is None
 
     async def close_async(self) -> bool:
         """Asynchronously closes the database.
 
         Returns:
-            bool: True if the database is closed, False otherwise.
+            True if the database is closed, False otherwise.
         """
         if self._engine is not None:
             self._engine.dispose()
@@ -318,29 +582,29 @@ class Database(BaseReducible):
             await self._async_engine.dispose()
             self._async_engine = None
         self._async_session_maker = None
-        return self._engine is None
+        return self._engine is None and self._async_engine is None
 
     # Session
-    def build_session_maker(self, **kwargs) -> sessionmaker:
+    def build_session_maker(self, **kwargs: Any) -> sessionmaker[Session]:
         """Builds the synchronous session maker.
 
         Args:
             **kwargs: Additional keyword arguments.
 
         Returns:
-            sessionmaker: The synchronous session maker.
+            The synchronous session maker.
         """
         self._session_maker = sessionmaker(self._engine, **kwargs)
         return self._session_maker
 
-    def build_async_session_maker(self, **kwargs) -> async_sessionmaker:
+    def build_async_session_maker(self, **kwargs: Any) -> async_sessionmaker[AsyncSession]:
         """Builds the asynchronous session maker.
 
         Args:
             **kwargs: Additional keyword arguments.
 
         Returns:
-            async_sessionmaker: The asynchronous session maker.
+            The asynchronous session maker.
         """
         self._async_session_maker = async_sessionmaker(self._async_engine, **kwargs)
         return self._async_session_maker
@@ -353,14 +617,18 @@ class Database(BaseReducible):
             **kwargs: Keyword arguments for session creation.
 
         Returns:
-            Session: A new synchronous session.
+            A new synchronous session.
 
         Raises:
-            IOError: If the database is not open.
+            OSError: If the database is not open.
         """
         if not self.is_open:
-            raise IOError("Database not open")
-        return Session(self._engine, *args, **kwargs) if args or kwargs else self._session_maker()
+            msg = "Database not open"
+            raise OSError(msg)
+
+        if (args or kwargs) or self._session_maker is None:
+            return Session(self._engine, *args, **kwargs)
+        return self._session_maker()
 
     def create_async_session(self, *args: Any, **kwargs: Any) -> AsyncSession:
         """Creates an asynchronous session.
@@ -370,14 +638,22 @@ class Database(BaseReducible):
             **kwargs: Keyword arguments for session creation.
 
         Returns:
-            AsyncSession: A new asynchronous session.
+            A new asynchronous session.
 
         Raises:
-            IOError: If the database is not open.
+            OSError: If the database is not open.
         """
         if not self.is_open:
-            raise IOError("Database not open")
-        return AsyncSession(self._async_engine, *args, **kwargs) if args or kwargs else self._async_session_maker()
+            msg = "Database not open"
+            raise OSError(msg)
+
+        if self._async_engine is None:
+            msg = "Async engine is not available"
+            raise OSError(msg)
+
+        if (args or kwargs) or self._async_session_maker is None:
+            return AsyncSession(self._async_engine, *args, **kwargs)
+        return self._async_session_maker()
 
     # Tables
     def manifest_tables(
@@ -395,14 +671,14 @@ class Database(BaseReducible):
             self.tables[name] = table_type(table_schema=table_schema, database=self, **kwargs)
 
     def build_tables(self) -> None:
-        """Builds the tables"""
+        """Builds the tables."""
         for table in self.tables.values():
             table.build()
 
     def load_tables(self) -> None:
         """Loads the tables."""
         for table in self.tables.values():
-            table.build()
+            table.load()
 
     # Table Operations
     def insert(self, item: Any, session: Session | None = None, begin: bool = False) -> None:
@@ -421,20 +697,17 @@ class Database(BaseReducible):
                 session.add(item)
         else:
             with self.create_session() as session:
-                if begin:
-                    with session.begin():
-                        session.add(item)
-                else:
+                with session.begin():
                     session.add(item)
 
     async def insert_async(self, item: Any, session: AsyncSession | None = None, begin: bool = False) -> None:
-        """Asynchronously, inserts an item into the database.
+        """Asynchronously inserts an item into the database.
 
-       Args:
-           item: The item to insert.
-           session: The SQLAlchemy session to use for the operation.
-           begin: If True, begins a transaction for the operation. Defaults to False.
-       """
+        Args:
+            item: The item to insert.
+            session: The SQLAlchemy session to use for the operation.
+            begin: If True, begins a transaction for the operation. Defaults to False.
+        """
         if session is not None:
             if begin:
                 async with session.begin():
@@ -442,11 +715,8 @@ class Database(BaseReducible):
             else:
                 session.add(item)
         else:
-            async with self.create_session() as session:
-                if begin:
-                    async with session.begin():
-                        session.add(item)
-                else:
+            async with self.create_async_session() as session:
+                async with session.begin():
                     session.add(item)
 
     def insert_all(self, items: Iterable[Any], session: Session | None = None, begin: bool = False) -> None:
@@ -465,10 +735,7 @@ class Database(BaseReducible):
                 session.add_all(items)
         else:
             with self.create_session() as session:
-                if begin:
-                    with session.begin():
-                        session.add_all(items)
-                else:
+                with session.begin():
                     session.add_all(items)
 
     async def insert_all_async(
@@ -477,13 +744,13 @@ class Database(BaseReducible):
         session: AsyncSession | None = None,
         begin: bool = False,
     ) -> None:
-        """Asynchronously, inserts items into the database.
+        """Asynchronously inserts items into the database.
 
-       Args:
-           items: The items to insert.
-           session: The SQLAlchemy session to use for the operation.
-           begin: If True, begins a transaction for the operation. Defaults to False.
-       """
+        Args:
+            items: The items to insert.
+            session: The SQLAlchemy session to use for the operation.
+            begin: If True, begins a transaction for the operation. Defaults to False.
+        """
         if session is not None:
             if begin:
                 async with session.begin():
@@ -491,9 +758,6 @@ class Database(BaseReducible):
             else:
                 session.add_all(items)
         else:
-            async with self.create_session() as session:
-                if begin:
-                    async with session.begin():
-                        session.add_all(items)
-                else:
+            async with self.create_async_session() as session:
+                async with session.begin():
                     session.add_all(items)

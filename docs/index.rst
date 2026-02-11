@@ -22,6 +22,12 @@ Table of Contents
    :caption: Concepts
    :maxdepth: 1
 
+   concepts/sqlalchemyobjects
+   concepts/tableschema
+   concepts/tablemanifestation
+   concepts/database
+   concepts/comprehensive
+
 .. toctree::
    :caption: Tutorials and Examples
    :maxdepth: 1

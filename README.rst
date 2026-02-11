@@ -36,12 +36,60 @@ sqlalchemyobjects
 Features
 --------
 
-Add a description of the package here!
+*sqlalchemyobjects* provides a high-level, object-oriented interface for SQLAlchemy, designed to streamline database
+interactions, simplify inheritance management, and provide a consistent API for both synchronous and asynchronous
+workflows.
+
+*   **TableSchema Mixins**: Define SQLAlchemy models with integrated CRUD methods (insert, upsert, delete, count)
+    available as class methods for both sync and async sessions.
+*   **TableManifestations**: Object-oriented table representations that manage their own session lifecycles and
+    encapsulate table-specific business logic.
+*   **Unified Database Object**: A central orchestrator that manages engines, session factories, and table
+    manifestations, serving as the single source of truth for the application.
+*   **Comprehensive Async Support**: Native, first-class support for asynchronous operations using SQLAlchemy's
+    asyncio extension.
+*   **Specialized Tables**: Built-in support for common patterns like ``SingletonTable`` (for configurations),
+    ``MetaInformationTable`` (for metadata), and ``UpdateTable`` (for automated timestamp tracking).
+*   **Backend Flexibility**: Easy configuration for SQLite, PostgreSQL, MySQL, Oracle, and MSSQL, with specific
+    optimizations for SQLite (automated directory creation and URI modes).
+
+
+Example
+-------
+
+Define a schema, a manifestation, and a database:
+
+.. code:: python
+
+   from sqlalchemy.orm import Mapped, mapped_column
+   from sqlalchemyobjects import Database, BaseTableSchema, TableManifestation
+
+   # 1. Define the Schema
+   class UserSchema(BaseTableSchema):
+       __tablename__ = "user"
+       name: Mapped[str]
+       role: Mapped[str] = mapped_column(default="user")
+
+   # 2. Define the Manifestation
+   class UserTable(TableManifestation):
+       table_schema = UserSchema
+
+   # 3. Combine in a Database
+   class MyDatabase(Database):
+       table_map = {"users": (UserTable, UserSchema, {})}
+
+   # 4. Use it
+   with MyDatabase(path="my_database.db", create=True) as db:
+       db.users.insert({"name": "Alice"})
+       user = db.users.get_by_id(1)
+       print(f"Hello, {user.name}!")
 
 Requirements
 ------------
 
 * Python 3.14 or later
+* SQLAlchemy
+* aiosqlite
 
 Installation
 ------------
@@ -87,7 +135,8 @@ please `file an issue`_ along with a detailed description.
 Credits
 -------
 
-Project Organization: `Anthony's Python Style Guide`_ based on `The Google Style Guide`_ and `Hypermodern Python`_ by `Claudio Jolowicz`_.
+Project Organization: `Anthony's Python Style Guide`_ based on `The Google Style Guide`_ and
+`Hypermodern Python`_ by `Claudio Jolowicz`_.
 
 .. _pip: https://pip.pypa.io/
 .. _PyPI: https://pypi.org/

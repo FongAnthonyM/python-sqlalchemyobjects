@@ -71,6 +71,7 @@ ignore = [
     "RET505",  # Disallow unnecessary else after return statement
     "N801",  # Class name must use CapWords convention
     "N812",  # Lowercase imports must be casted "as" lowercase as well
+    "ASYNC240", # Async functions should not use pathlib.Path methods
     "DOC201",  # Returns must be documented in docstring
     "DOC202",  # Disallow Returns in docstring if there are no Returns
     "D205",  # 1 blank line required between summary line and description
@@ -78,6 +79,11 @@ ignore = [
     "D415",  # The first line must end with a period
     "F401",  # All imports must be used
     "F403",  # Disallow wildcard imports (from module import *)
+    "F405",  # Disallow names defined from star imports
+    "PT028",  # Test function parameter has default argument
+    "PT011",  # pytest.raises() is too broad
+    "RUF012",  # Multable class attriubes must be annotated with ClassVar
+    "RUF067",  # Disallow content in __init__ (false positive for metadata)
 ]
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]

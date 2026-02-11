@@ -30,7 +30,6 @@ from typing import Any
 import nox
 from nox import Session, session
 
-
 # Definitions #
 # Constants #
 package = "sqlalchemyobjects"
