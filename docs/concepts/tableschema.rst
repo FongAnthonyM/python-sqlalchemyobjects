@@ -75,7 +75,7 @@ to the base class to provide CRUD operations that respect the polymorphic identi
         """The root of the database schema"""
 
 
-    class User(BaseTableSchema, DatabaseRoot):  # The single table
+    class User(UserTableSchema, DatabaseRoot):  # The single table
         __tablename__ = "user"
         __mapper_args__ = {"polymorphic_on": "type", "polymorphic_identity": "user"}
 
@@ -99,14 +99,14 @@ mixins still provide a consistent interface for these complex structures.
 .. code-block:: python
 
     # Base Table Mixin Definitions
-    class UserMixin(BaseTableSchema):
+    class UserTableSchema(BaseTableSchema):
         id: Mapped[int] = mapped_column(primary_key=True)
         name: Mapped[str]
         email: Mapped[str]
         type: Mapped[str] = mapped_column()
 
 
-    class EngineerMixin(UserMixin):  # A subclass of UserMixin
+    class EngineerTableSchema(UserTableSchema):  # A subclass of UserMixin
         specialty: Mapped[str]
 
 
@@ -115,12 +115,12 @@ mixins still provide a consistent interface for these complex structures.
         """The root of the database schema"""
 
 
-    class Person(UserMixin, DatabaseRoot):  # The primary table with columns in User Mixin
+    class Person(UserTableSchema, DatabaseRoot):  # The primary table with columns in User Mixin
         __tablename__ = "person"
         __mapper_args__ = {"polymorphic_on": "type", "polymorphic_identity": "person"}
 
 
-    class Engineer(Person, EngineerMixin):  # The secondary table with columns
+    class Engineer(Person, EngineerTableSchema):  # The secondary table with columns
         __tablename__ = "engineer"
         __mapper_args__ = {"polymorphic_identity": "engineer"}
         id: Mapped[int] = mapped_column(ForeignKey("person.id"), primary_key=True)  # Specifies that this a joined table
