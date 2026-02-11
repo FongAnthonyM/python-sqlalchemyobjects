@@ -61,7 +61,8 @@ Define a schema, a manifestation, and a database:
 
 .. code:: python
 
-   from sqlalchemy.orm import Mapped, mapped_column
+   from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase
+   from sqlalchemy.ext.asyncio import AsyncAttrs
    from sqlalchemyobjects import Database, BaseTableSchema, TableManifestation
 
    # 1. Define the Schema
@@ -74,14 +75,22 @@ Define a schema, a manifestation, and a database:
    class UserTable(TableManifestation):
        table_schema = UserSchema
 
-   # 3. Combine in a Database
-   class MyDatabase(Database):
-       table_map = {"users": (UserTable, UserSchema, {})}
+   # 3. Create Database Schema
+   class DatabaseSchema(AsyncAttrs, DeclarativeBase):
+       """The root schema for the application."""
 
-   # 4. Use it
+   class DatabaseUserTableSchema(UserSchema, DatabaseSchema):
+       """The actual SQLAlchemy model for the 'user' table."""
+
+   # 4. Combine in a Database
+   class MyDatabase(Database):
+       schema = DatabaseSchema
+       table_map = {"users": (UserTable, DatabaseUserTableSchema, {})}
+
+   # 5. Use it
    with MyDatabase(path="my_database.db", create=True) as db:
-       db.users.insert({"name": "Alice"})
-       user = db.users.get_by_id(1)
+       db.tables["users"].insert({"name": "Alice"})
+       user = db.tables["users].get_by_id(1)
        print(f"Hello, {user.name}!")
 
 Requirements
