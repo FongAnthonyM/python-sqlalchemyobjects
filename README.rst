@@ -65,13 +65,13 @@ Define a schema, a manifestation, and a database:
    from sqlalchemy.ext.asyncio import AsyncAttrs
    from sqlalchemyobjects import Database, BaseTableSchema, TableManifestation
 
-   # 1. Define the Schema
+   # 1. Define the Table Schema
    class UserSchema(BaseTableSchema):
        __tablename__ = "user"
        name: Mapped[str]
        role: Mapped[str] = mapped_column(default="user")
 
-   # 2. Define the Manifestation
+   # 2. Define the Table Manifestation
    class UserTable(TableManifestation):
        table_schema = UserSchema
 
@@ -90,7 +90,7 @@ Define a schema, a manifestation, and a database:
    # 5. Use it
    with MyDatabase(path="my_database.db", create=True) as db:
        db.tables["users"].insert({"name": "Alice"})
-       user = db.tables["users].get_by_id(1)
+       user = db.tables["users"].get_by_id(1)
        print(f"Hello, {user.name}!")
 
 Requirements
