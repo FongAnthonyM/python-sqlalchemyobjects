@@ -53,8 +53,8 @@ to create the database (and its tables) and if you want to use an asynchronous e
     await async_db.create_database_async()
     await async_db.open()
 
-The ``Database`` class also supports the context manager protocol (and async context manager protocol), ensuring
-the database is properly closed after use.
+The ``Database`` class also supports the context manager protocol (and asynchronous context manager protocol),
+ensuring the database is properly closed after use.
 
 .. code-block:: python
 
@@ -114,8 +114,8 @@ methods that handle session management internally.
 Backend Features
 ----------------
 
-The ``Database`` class is designed to be flexible and supports a variety of database backends through SQLAlchemy. It
-provides built-in support for both synchronous and asynchronous drivers, and includes specific optimizations for
+The ``Database`` class is designed to be flexible and supports a variety of database backends through SQLAlchemy.
+It provides built-in support for both synchronous and asynchronous drivers, and includes specific optimizations for
 SQLite.
 
 Supported Backends

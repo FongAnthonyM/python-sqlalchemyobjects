@@ -38,7 +38,7 @@ SQLAlchemy provides several `inheritance patterns`_ for mapping class hierarchie
 
 Managing these structures often involves complex mapper configurations and manual handling of polymorphic queries.
 
-The Gap in standard SQLAlchemy
+The Gap in Standard SQLAlchemy
 ------------------------------
 
 Standard SQLAlchemy is a versatile toolkit, providing the building blocks for database interaction. However, it
@@ -55,13 +55,13 @@ operations:
 
 SQLAlchemy Objects Extensions
 -----------------------------
-``sqlalchemyobjects`` offers extensions to the SQLAlchemy paradigm to address the gaps in SQLAlchemy
+``sqlalchemyobjects`` offers extensions to the SQLAlchemy paradigm to address these gaps.
 
 -   :doc:`TableSchema <tableschema>`: Base classes that assist in defining SQLAlchemy inheritance structures and
     provide common CRUD methods as mixins.
 -   :doc:`TableManifestation <tablemanifestation>`: Object representations of tables that provide a session-managed
     interface for data access and manipulation.
--   :doc:`Database <database>`: A unified object that combines whole database methods and serves as the single source
+-   :doc:`Database <database>`: A unified object that manages database-wide operations and serves as the single source
     of truth for all database interactions.
 
 For a detailed guide on how these components work together in a real-world application, see the

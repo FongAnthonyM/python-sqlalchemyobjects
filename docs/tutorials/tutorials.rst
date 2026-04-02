@@ -15,7 +15,7 @@ The following Jupyter notebooks are available in the ``tutorials/`` directory of
 *   ``tutorials/database_tutorial.ipynb``: A deep dive into the ``Database`` class, connection management, and sessions.
 *   ``tutorials/tables/base/basetable_tutorial.ipynb``: A getting started guide covering basic table definition and CRUD operations.
 *   ``tutorials/tables/base/extending_tables_search_filter_tutorial.ipynb``: Learn how to implement custom query logic and advanced filters in your manifestations.
-*   ``tutorials/tables/base/run_runtime_search_filter_tutorial.ipynb``: Learn how to run searches and filters on tables at runtime without extending classes.
+*   ``tutorials/tables/base/run_searches_and_filters_on_existing_tables_tutorial.ipynb``: Learn how to run searches and filters on tables at runtime without extending classes.
 *   ``tutorials/tables/base/singletontable_tutorial.ipynb``: A guide on using singleton tables for configuration management.
 *   ``tutorials/tables/base/metainformationtable_tutorial.ipynb``: Learn how to manage cached application metadata.
 *   ``tutorials/tables/base/updatetable_tutorial.ipynb``: Track sequential updates and perform delta queries.

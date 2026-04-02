@@ -1,12 +1,13 @@
 TableSchema
 ===========
 
-TableSchema is an extension of SQLAlchemy's Object Relational Mapping Inheritance concepts. Specifically, TableSchema
-acts as an inheritance mixin to decouple table schema design from the database structure specification. For example,
-strictly following SQLAlchemy's table specification leads creating a table schema which only applies to the database it
-is housed in. This means that specified table schema cannot be used other databases. In fact that table schema cannot be
-used in the same database to specify separate tables with the same structure. The TableSchema structure described here
-is an organized implementation of the mixin strategy which SQLAlchemy suggests for writing decoupled table schemas.
+TableSchema is an extension of SQLAlchemy's Object-Relational Mapping (ORM) inheritance concepts. Specifically,
+TableSchema acts as an inheritance mixin to decouple table schema design from the database structure specification.
+For example, strictly following SQLAlchemy's table specification leads to creating a table schema which only applies
+to the database it is housed in. This means that specified table schema cannot be used in other databases. In fact,
+that table schema cannot be used in the same database to specify separate tables with the same structure. The
+TableSchema structure described here is an organized implementation of the mixin strategy which SQLAlchemy suggests for
+writing decoupled table schemas.
 
 For a detailed guide on how TableSchema fits into the overall SQLAlchemyObjects architecture, see the
 :doc:`Comprehensive Usage <comprehensive>` guide.
@@ -46,12 +47,12 @@ that share a common structure.
         purchase: Mapped[str]
 
 
-    class Employee(UserTableSchema, DatabaseRoot):
+    class Employee(UserTableSchema, DatabaseRootSchema):
         __tablename__ = "employee"
         task: Mapped[str]
 
-Both ``Customer`` and ``Employee`` now have the columns with the same properties, but correspond to their respective
-tables. Also they have a full suite of CRUD methods defined in ``BaseTableSchema``, operating on their respective
+Both ``Customer`` and ``Employee`` now have columns with identical properties, but correspond to their respective
+tables. They also have a full suite of CRUD methods defined in ``BaseTableSchema``, operating on their respective
 tables.
 
 Single Table Inheritance
@@ -88,7 +89,7 @@ to the base class to provide CRUD operations that respect the polymorphic identi
         __mapper_args__ = {"polymorphic_identity": "customer"}
 
 Calling ``Admin.get_all(session)`` will automatically filter for rows where ``type == 'admin'``, leveraging
-SQLAlchemy's built-in polymorphism while providing the convenient TableSchema API for main table and the sub-tables.
+SQLAlchemy's built-in polymorphism while providing the convenient TableSchema API for the main table and the sub-tables.
 
 Joined Table Inheritance
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -123,7 +124,7 @@ mixins still provide a consistent interface for these complex structures.
     class Engineer(Person, EngineerTableSchema):  # The secondary table with columns
         __tablename__ = "engineer"
         __mapper_args__ = {"polymorphic_identity": "engineer"}
-        id: Mapped[int] = mapped_column(ForeignKey("person.id"), primary_key=True)  # Specifies that this a joined table
+        id: Mapped[int] = mapped_column(ForeignKey("person.id"), primary_key=True)  # Specifies that this is a joined table
 
 
 Even with joined tables, ``Engineer.insert(session, {...})`` handles the necessary multi-table inserts
@@ -134,12 +135,12 @@ Table Methods
 
 The TableSchema structure also promotes defining table interaction methods.
 
-In SQLAlchemy, the class for a TableSchema represents the table while instances of the TableSchem represent rows of the
-table. Furthermore, the TableSchema class represents specifically the schema not the table itself. Therefore, table
-manipulation methods are class methods and must be passed a Session, a link to a real table/database, to perform a table
-manipulation.
+In SQLAlchemy, the class for a TableSchema represents the table while instances of the TableSchema represent rows of
+the table. Furthermore, the TableSchema class specifically represents the schema, not the table itself. Therefore,
+table manipulation methods are class methods and must be passed a Session, a link to a real table/database, to perform
+a table manipulation.
 
-``BaseTableSchema`` and its subclasses, have a suite of common CRUD table manipulation methods. These include
+``BaseTableSchema`` and its subclasses have a suite of common CRUD table manipulation methods. These include
 ``insert``, ``upsert``, ``delete``, ``count``, and various ``get`` methods (e.g., ``get_by_id``, ``get_all``).
 
 These methods are class methods that take a `Session`_ (or `AsyncSession`_) as an argument:
@@ -152,7 +153,7 @@ These methods are class methods that take a `Session`_ (or `AsyncSession`_) as a
 Common CRUD Operations
 ----------------------
 
-By inheriting from ``BaseTableSchema``, classes gains several methods for interacting with the database. These
+By inheriting from ``BaseTableSchema``, classes gain several methods for interacting with the database. These
 methods are designed to be used as class methods, requiring a SQLAlchemy `Session`_ or `AsyncSession`_.
 
 Insert

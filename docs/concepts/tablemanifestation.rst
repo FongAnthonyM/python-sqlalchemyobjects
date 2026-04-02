@@ -61,7 +61,7 @@ Using a TableManifestation
 Once defined, a manifestation is instantiated by passing the corresponding schema and a database instance.
 
 It is important to note that the ``table_schema`` argument must be a class that inherits from both a
-:doc:`TableSchema <tableschema>` (``BaseTableSchema`` or is subclasses) and the SQLAlchemy `DeclarativeBase`_.
+:doc:`TableSchema <tableschema>` (``BaseTableSchema`` or its subclasses) and the SQLAlchemy `DeclarativeBase`_.
 This ensures the class is both a valid SQLAlchemy model and possesses the required CRUD mixins. Additionally, a
 :doc:`Database <database>` instance must be provided to bind the manifestation to a specific database connection.
 

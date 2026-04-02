@@ -1,7 +1,7 @@
 Installation
 ============
 
-PyPI (pip) is the recomended way to install Sqlalchemyobjects, but GitHub can also be used. If you want to run the examples
+PyPI (pip) is the recommended way to install *sqlalchemyobjects*, but GitHub can also be used. If you want to run the examples
 and Jupyter tutorials included in this repository, you should clone and install from GitHub.
 
 
@@ -27,10 +27,10 @@ Install the latest code from the main branch without cloning:
 GitHub Clone
 ------------
 
-Installing a github clone can be useful for either exploring the examples and tutorials and/or contributing
-sqlalchemyobjects.
+Installing a GitHub clone can be useful for either exploring the examples and tutorials or contributing to
+*sqlalchemyobjects*.
 
-For only exlporing examples and tutorials:
+For only exploring examples and tutorials:
 
 .. code-block:: bash
 
@@ -38,7 +38,7 @@ For only exlporing examples and tutorials:
    cd python-sqlalchemyobjects
    pip install .[jupyter]
 
-For contributing/developing sqlalchemyobjects:
+For contributing to or developing *sqlalchemyobjects*:
 
 .. code-block:: bash
 

@@ -30,7 +30,7 @@ or inheritance patterns.
         role: Mapped[str] = mapped_column(default="user")
 
         @classmethod
-        def get_by_name(cls, session: Session, name: str) -> "UserMixin | None":
+        def get_by_name(cls, session: Session, name: str) -> "UserTableSchema | None":
             """Custom logic to find a user by name."""
             return cls.get_by(session, "name", name).scalars().first()
 
@@ -42,6 +42,7 @@ calls to the class methods of the ``TableSchema``.
 
 .. code-block:: python
 
+    from typing import Any
     from sqlalchemyobjects.tables.base import TableManifestation
 
     class UserTableManifestation(TableManifestation):
@@ -66,7 +67,7 @@ with the base.
         """The root schema for the application."""
 
 
-    class DatabaseUserTableSchema(UserTableSchema, MySchema):
+    class DatabaseUserTableSchema(UserTableSchema, DatabaseSchema):
         """The actual SQLAlchemy model for the 'user' table."""
 
 Step 4: Combine into a Database Object
@@ -85,7 +86,7 @@ Finally, subclass ``Database`` to tie everything together.
     class MyDatabase(Database):
         schema = DatabaseSchema
         table_map = {
-            "users": (UserTableManifestation, DatabaseUserTableSchema, {}),  # The dictionary is any kwargs to use during Manifestation construction
+            "users": (UserTableManifestation, DatabaseUserTableSchema, {}),  # The dictionary is any kwargs to use during manifestation construction
         }
 
         @property
