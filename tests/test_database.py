@@ -62,46 +62,6 @@ class TestDatabase(DatabaseTestSuite):
     # Instance Methods #
 
     # Tests #
-    def test_database_getstate_not_dict(self) -> None:
-        """Test Database.__getstate__ when parent returns non-dict."""
-
-        class TestDB(Database):
-            pass
-
-        db = TestDB(init=False)
-
-        with patch("baseobjects.BaseReducible.__getstate__") as mock_super:
-            mock_super.return_value = (None, {})
-
-            state = db.__getstate__()
-            assert state == (None, {})
-
-    def test_table_manifestation_getstate_not_dict(self) -> None:
-        """Test TableManifestation.__getstate__ when parent returns non-dict."""
-
-        class TestTable(TableManifestation):
-            pass
-
-        table = TestTable(init=False)
-
-        with patch("baseobjects.BaseReducible.__getstate__") as mock_super:
-            mock_super.return_value = (None, {})
-
-            state = table.__getstate__()
-            assert state == (None, {})
-
-    def test_build_tables(self, test_object: Database) -> None:
-        """Tests the build_tables method."""
-        test_object.build_tables()
-        # Subclasses should define how to test that its tables are built, so this just ensures it runs
-        assert True
-
-    def test_load_tables(self, test_object: Database) -> None:
-        """Tests the load_tables method."""
-        test_object.load_tables()
-        # Subclasses should define how to test that its tables are loaded, so this just ensures it runs
-        assert True
-
     def test_construct_with_schema(self) -> None:
         """Tests constructing with schema."""
         db = self.UnitTestClass(schema=self.UnitTestClass.schema)

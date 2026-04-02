@@ -28,6 +28,7 @@ from typing import Any, Self
 
 # Third-Party Packages #
 from baseobjects import BaseReducible
+from baseobjects.state import BaseIOModeObject
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
@@ -72,7 +73,7 @@ class SQLiteModes(StrEnum):
     MEMORY = "memory"
 
 
-class Database(BaseReducible):
+class Database(BaseIOModeObject, BaseReducible):
     """Manages the database including creating, opening, and modifying the database.
 
     Attributes:
@@ -91,6 +92,8 @@ class Database(BaseReducible):
     _path: Path | None = None
     url: str | None = None
     _mode: SQLiteModes = SQLiteModes.RWC
+    _valid_modes: type[SQLiteModes] = SQLiteModes
+    _is_open: bool = False
 
     _engine: Engine | None = None
     _async_engine: AsyncEngine | None = None
@@ -144,9 +147,9 @@ class Database(BaseReducible):
             self._path = Path(value)
 
     @property
-    def mode(self) -> str:
+    def mode(self) -> SQLiteModes:
         """The mode to use for the database."""
-        return self._mode.value
+        return self._mode
 
     @mode.setter
     def mode(self, value: SQLiteModes | str) -> None:
@@ -238,8 +241,8 @@ class Database(BaseReducible):
 
     @property
     def is_open(self) -> bool:
-        """Checks if the database is open."""
-        return self._engine is not None or self._async_engine is not None
+        """The open state of the database."""
+        return self._is_open and (self._engine is not None or self._async_engine is not None)
 
     @property
     def is_async(self) -> bool:
@@ -248,6 +251,14 @@ class Database(BaseReducible):
 
     # Magic Methods #
     # Construction/Destruction
+    def __repr__(self) -> str:
+        """The representation of the object.
+
+        Returns:
+            The representation of the object.
+        """
+        return f"<{self.__class__.__name__}(is_open={self.is_open}, mode={self.mode!r})>"
+
     def __init__(
         self,
         path: str | Path | None = None,
@@ -343,20 +354,6 @@ class Database(BaseReducible):
             self.open(async_engine=was_async)
 
     # Context Managers
-    def __enter__(self) -> Self:
-        """Enters the context manager.
-
-        Returns:
-            The database object.
-        """
-        if not self.is_open:
-            self.open()
-        return self
-
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Exits the context manager."""
-        self.close()
-
     async def __aenter__(self) -> Self:
         """Enters the asynchronous context manager.
 
@@ -366,10 +363,6 @@ class Database(BaseReducible):
         if not self.is_open or self._async_engine is None:
             self.open(async_engine=True)
         return self
-
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Exits the asynchronous context manager."""
-        await self.close_async()
 
     # Instance Methods #
     # Constructors/Destructors
@@ -455,6 +448,7 @@ class Database(BaseReducible):
 
         self._engine = create_engine(self.full_url, **kwargs)
         self._async_engine = create_async_engine(self.async_full_url, **kwargs) if async_engine else None
+        self._is_open = True
 
     # Database
     def create_database(
@@ -507,32 +501,57 @@ class Database(BaseReducible):
             async with self._async_engine.begin() as conn:
                 await conn.run_sync(self.schema.metadata.create_all)
 
-    def open(self, mode: SQLiteModes | str | None = None, async_engine: bool = False, **kwargs: Any) -> Database:
+    def open(
+        self,
+        mode: SQLiteModes | str | None = None,
+        async_engine: bool = False,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Self:
         """Opens the database.
 
         Args:
             mode: When the database is SQLite, the mode to use. Defaults to None.
             async_engine: Whether to create an asynchronous engine. Defaults to False.
+            *args: Additional positional arguments.
             **kwargs: Additional keyword arguments.
 
         Returns:
             The opened database.
         """
         if (not async_engine and self._engine is not None) or (async_engine and self._async_engine is not None):
+            self._is_open = True
             return self
 
         self.create_engine(mode=mode, async_engine=async_engine, **kwargs)
         self.build_session_maker()
         if self._async_engine is not None:
             self.build_async_session_maker()
+        self._is_open = True
         return self
 
-    def close(self) -> bool:
-        """Closes the database.
+    async def open_async(
+        self,
+        mode: SQLiteModes | str | None = None,
+        async_engine: bool = True,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Self:
+        """Asynchronously opens the database.
+
+        Args:
+            mode: When the database is SQLite, the mode to use. Defaults to None.
+            async_engine: Whether to create an asynchronous engine. Defaults to True.
+            *args: Additional positional arguments.
+            **kwargs: Additional keyword arguments.
 
         Returns:
-            True if the database is closed, False otherwise.
+            The opened database.
         """
+        return self.open(mode, async_engine, *args, **kwargs)
+
+    def close(self) -> None:
+        """Closes the database."""
         if self._engine is not None:
             self._engine.dispose()
             self._engine = None
@@ -561,13 +580,14 @@ class Database(BaseReducible):
                 raise
             self._async_engine = None
         self._async_session_maker = None
-        return self._engine is None and self._async_engine is None
+        self._is_open = False
 
-    async def close_async(self) -> bool:
+    async def close_async(self, *args: Any, **kwargs: Any) -> None:
         """Asynchronously closes the database.
 
-        Returns:
-            True if the database is closed, False otherwise.
+        Args:
+            *args: Positional arguments, not used in this implementation but a placeholder for future expansion.
+            **kwargs: Keyword arguments, not used in this implementation but a placeholder for future expansion.
         """
         if self._engine is not None:
             self._engine.dispose()
@@ -576,7 +596,7 @@ class Database(BaseReducible):
             await self._async_engine.dispose()
             self._async_engine = None
         self._async_session_maker = None
-        return self._engine is None and self._async_engine is None
+        self._is_open = False
 
     # Session
     def build_session_maker(self, **kwargs: Any) -> sessionmaker[Session]:

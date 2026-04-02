@@ -25,7 +25,7 @@ from uuid import UUID
 
 # Third-Party Packages #
 import pytest
-from baseobjects.testsuite import BaseReducibleTestSuite
+from baseobjects.testsuite import BaseIOModeObjectTestSuite, BaseReducibleTestSuite
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Session
 
@@ -40,7 +40,7 @@ class TableSchemaMixin(BaseTableSchema, DeclarativeBase):
     """A Mixin class for testing BaseTableSchema functionality."""
 
 
-class DatabaseTestSuite(BaseReducibleTestSuite):
+class DatabaseTestSuite(BaseIOModeObjectTestSuite, BaseReducibleTestSuite):
     """A Testsuite for the Database class.
 
     This class tests the functionality of the Database class. It inherits from BaseClassTestSuite to leverage common
@@ -259,8 +259,136 @@ class DatabaseTestSuite(BaseReducibleTestSuite):
         await db.close_async()
         assert not db.is_open
 
+    def test_require_open(self, test_object: Any) -> None:
+        """Tests the require_open method."""
+        test_object.close()
+        with pytest.raises(ValueError, match=r"Operation on a closed .* is not allowed."):
+            test_object.require_open()
+        test_object.open()
+        test_object.require_open()  # Should not raise
+
+    def test_require_closed(self, test_object: Any) -> None:
+        """Tests the require_closed method."""
+        test_object.open()
+        with pytest.raises(ValueError, match=r"Operation on an open .* is not allowed."):
+            test_object.require_closed()
+        test_object.close()
+        test_object.require_closed()  # Should not raise
+
+    @pytest.mark.asyncio
+    async def test_open_async(self, test_object: Any) -> None:
+        """Tests the open_async method."""
+        test_object.close()
+        await test_object.open_async()
+        assert test_object.is_open
+        assert test_object.is_async
+
+    def test_validate_mode(self, test_object: Any) -> None:
+        """Tests the validate_mode method."""
+        # Local Packages #
+        from ..database import SQLiteModes
+
+        assert test_object.validate_mode(SQLiteModes.RWC)
+        assert test_object.validate_mode("ro")
+        assert not test_object.validate_mode("invalid_mode")
+
+    def test_require_mode(self, test_object: Any) -> None:
+        """Tests the require_mode method."""
+        # Local Packages #
+        from ..database import SQLiteModes
+
+        test_object.mode = SQLiteModes.RO
+        test_object.require_mode(SQLiteModes.RO)
+        with pytest.raises(ValueError, match=r"Mode .* is not valid for this operation."):
+            test_object.require_mode(SQLiteModes.RW)
+
+    def test_reopen(self, test_object: Any) -> None:
+        """Tests the reopen method."""
+        test_object.open()
+        assert test_object.is_open
+        test_object.reopen()
+        assert test_object.is_open
+        test_object.close()
+        test_object.reopen()
+        assert test_object.is_open
+
+    @pytest.mark.asyncio
+    async def test_reopen_async(self, test_object: Any) -> None:
+        """Tests the reopen_async method."""
+        await test_object.open_async()
+        assert test_object.is_open
+        await test_object.reopen_async()
+        assert test_object.is_open
+        await test_object.close_async()
+        await test_object.reopen_async()
+        assert test_object.is_open
+
+    def test_ensure_open(self, test_object: Any) -> None:
+        """Tests the ensure_open method."""
+        test_object.ensure_open()
+        assert test_object.is_open
+        test_object.close()
+        assert not test_object.is_open
+        test_object.ensure_open()
+        assert test_object.is_open
+
+    @pytest.mark.asyncio
+    async def test_ensure_open_async(self, test_object: Any) -> None:
+        """Tests the ensure_open_async method."""
+        await test_object.ensure_open_async()
+        assert test_object.is_open
+        await test_object.close_async()
+        assert not test_object.is_open
+        await test_object.ensure_open_async()
+        assert test_object.is_open
+
+    def test_as_open(self, test_object: Any) -> None:
+        """Tests the as_open method."""
+        test_object.close()
+        with test_object.as_open() as db:
+            assert db is test_object
+            assert db.is_open
+        assert not test_object.is_open
+
+    @pytest.mark.asyncio
+    async def test_as_open_async(self, test_object: Any) -> None:
+        """Tests the as_open_async method."""
+        test_object.close()
+        async with test_object.as_open_async() as db:
+            assert db is test_object
+            assert db.is_open
+        assert not test_object.is_open
+
+    def test_database_getstate_not_dict(self) -> None:
+        """Test Database.__getstate__ when parent returns non-dict."""
+
+        class TestDB(Database):
+            pass
+
+        db = TestDB(init=False)
+
+        with patch("baseobjects.BaseReducible.__getstate__") as mock_super:
+            mock_super.return_value = (None, {})
+
+            state = db.__getstate__()
+            assert state == (None, {})
+
+    def test_table_manifestation_getstate_not_dict(self) -> None:
+        """Test TableManifestation.__getstate__ when parent returns non-dict."""
+
+        class TestTable(TableManifestation):
+            pass
+
+        table = TestTable(init=False)
+
+        with patch("baseobjects.BaseReducible.__getstate__") as mock_super:
+            mock_super.return_value = (None, {})
+
+            state = table.__getstate__()
+            assert state == (None, {})
+
     @pytest.mark.parametrize("initially_open", [True, False])
-    def test_context_manager(self, initially_open: bool) -> None:
+    def test_database_context_manager(self, initially_open: bool) -> None:
         """Tests the context manager.
 
         Args:
@@ -280,7 +408,7 @@ class DatabaseTestSuite(BaseReducibleTestSuite):
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("initially_open", [True, False])
-    async def test_async_context_manager(self, initially_open: bool) -> None:
+    async def test_database_async_context_manager(self, initially_open: bool) -> None:
         """Tests the asynchronous context manager.
 
         Args:
@@ -513,15 +641,33 @@ class DatabaseTestSuite(BaseReducibleTestSuite):
                 assert "test" in database.tables
                 assert isinstance(database.tables["test"], TableManifestation)
 
-    @pytest.mark.skip(reason="build_tables test not implemented")
-    def test_build_tables(self, test_object: Database) -> None:
-        """Tests the build_tables method."""
-        # Subclasses should define how to test that its tables are built
+    def test_build_tables(self, test_object: Any) -> None:
+        """Tests the build_tables method.
 
-    @pytest.mark.skip(reason="load_tables test not implemented")
-    def test_load_tables(self, test_object: Database) -> None:
-        """Tests the load_tables method."""
-        # Subclasses should define how to test that its tables are loaded
+        Args:
+            test_object: The test object.
+        """
+        # Standard Libraries #
+        from unittest.mock import MagicMock
+
+        mock_table = MagicMock()
+        test_object.tables["mock_table"] = mock_table
+        test_object.build_tables()
+        assert mock_table.build.called
+
+    def test_load_tables(self, test_object: Any) -> None:
+        """Tests the load_tables method.
+
+        Args:
+            test_object: The test object.
+        """
+        # Standard Libraries #
+        from unittest.mock import MagicMock
+
+        mock_table = MagicMock()
+        test_object.tables["mock_table"] = mock_table
+        test_object.load_tables()
+        assert mock_table.load.called
 
     @pytest.mark.parametrize("schema", [None])
     @pytest.mark.parametrize("table_map", [None, {}])
@@ -679,7 +825,7 @@ class DatabaseTestSuite(BaseReducibleTestSuite):
                 assert await session.get(self.table_schema, UUID(int=2)) is not None
 
     # Properties Tests #
-    def test_mode_setter_getter(self, test_object: Database) -> None:
+    def test_mode_setter_getter(self, test_object: Any) -> None:
         """Tests the mode property.
 
         Args:
@@ -697,7 +843,7 @@ class DatabaseTestSuite(BaseReducibleTestSuite):
             test_object.mode = "ro"
         test_object.close()
 
-    def test_backend_setter_getter(self, test_object: Database) -> None:
+    def test_backend_setter_getter(self, test_object: Any) -> None:
         """Tests the backend property.
 
         Args:
@@ -709,7 +855,7 @@ class DatabaseTestSuite(BaseReducibleTestSuite):
         test_object.backend = "sqlite://"
         assert test_object.backend == "sqlite://"
 
-    def test_async_backend_setter_getter(self, test_object: Database) -> None:
+    def test_async_backend_setter_getter(self, test_object: Any) -> None:
         """Tests the async_backend property.
 
         Args:
@@ -721,7 +867,7 @@ class DatabaseTestSuite(BaseReducibleTestSuite):
         test_object.async_backend = "sqlite+aiosqlite://"
         assert test_object.async_backend == "sqlite+aiosqlite://"
 
-    def test_full_url_exceptions(self, test_object: Database) -> None:
+    def test_full_url_exceptions(self, test_object: Any) -> None:
         """Tests full_url exceptions.
 
         Args:
@@ -742,7 +888,7 @@ class DatabaseTestSuite(BaseReducibleTestSuite):
         with pytest.raises(ValueError, match="Path is not set"):
             _ = test_object.full_url
 
-    def test_async_full_url_exceptions(self, test_object: Database) -> None:
+    def test_async_full_url_exceptions(self, test_object: Any) -> None:
         """Tests async_full_url exceptions.
 
         Args:
@@ -763,7 +909,7 @@ class DatabaseTestSuite(BaseReducibleTestSuite):
         with pytest.raises(ValueError, match="Path is not set"):
             _ = test_object.async_full_url
 
-    def test_full_url_variants(self, test_object: Database) -> None:
+    def test_full_url_variants(self, test_object: Any) -> None:
         """Tests full_url variants.
 
         Args:
@@ -798,7 +944,7 @@ class DatabaseTestSuite(BaseReducibleTestSuite):
         test_object.url = "sqlite:///test.db?some_param=value"
         assert test_object.full_url == "sqlite:///test.db?some_param=value&mode=rwc"
 
-    def test_async_full_url_variants(self, test_object: Database) -> None:
+    def test_async_full_url_variants(self, test_object: Any) -> None:
         """Tests async_full_url variants.
 
         Args:
@@ -843,7 +989,7 @@ class DatabaseTestSuite(BaseReducibleTestSuite):
         obj = self.UnitTestClass(path=db_path, mode="ro", init=True)
         assert obj.mode == "ro"
 
-    def test_create_engine_with_mode(self, test_object: Database, tmp_path: Path) -> None:
+    def test_create_engine_with_mode(self, test_object: Any, tmp_path: Path) -> None:
         """Tests create_engine with mode.
 
         Args:
@@ -854,7 +1000,7 @@ class DatabaseTestSuite(BaseReducibleTestSuite):
         test_object.create_engine(path=db_path, mode="ro")
         assert test_object.mode == "ro"
 
-    def test_close_with_running_loop(self, test_object: Database) -> None:
+    def test_close_with_running_loop(self, test_object: Any) -> None:
         """Tests close() when an event loop is running.
 
         Args:
@@ -872,7 +1018,7 @@ class DatabaseTestSuite(BaseReducibleTestSuite):
                 coro = mock_loop.create_task.call_args[0][0]
                 coro.close()
 
-    def test_close_with_running_loop_already_has_tasks(self, test_object: Database) -> None:
+    def test_close_with_running_loop_already_has_tasks(self, test_object: Any) -> None:
         """Tests close() when an event loop is running and _closing_tasks already exists.
 
         Args:
@@ -892,7 +1038,7 @@ class DatabaseTestSuite(BaseReducibleTestSuite):
                 coro = mock_loop.create_task.call_args[0][0]
                 coro.close()
 
-    def test_close_with_running_loop_not_running(self, test_object: Database) -> None:
+    def test_close_with_running_loop_not_running(self, test_object: Any) -> None:
         """Tests close() when get_running_loop returns a loop that is not running.
 
         Args:
@@ -908,7 +1054,7 @@ class DatabaseTestSuite(BaseReducibleTestSuite):
                 test_object.close()
                 assert not mock_loop.create_task.called
 
-    def test_close_with_running_loop_error(self, test_object: Database) -> None:
+    def test_close_with_running_loop_error(self, test_object: Any) -> None:
         """Tests close() when get_running_loop raises RuntimeError.
 
         Args:
@@ -922,7 +1068,7 @@ class DatabaseTestSuite(BaseReducibleTestSuite):
                 test_object.close()
                 # Should pass silently
 
-    def test_close_with_exception(self, test_object: Database) -> None:
+    def test_close_with_exception(self, test_object: Any) -> None:
         """Tests close() when run() raises an exception.
 
         Args:
@@ -933,7 +1079,7 @@ class DatabaseTestSuite(BaseReducibleTestSuite):
             with pytest.raises(ValueError, match="Test exception"):
                 test_object.close()
 
-    def test_full_url_non_sqlite(self, test_object: Database) -> None:
+    def test_full_url_non_sqlite(self, test_object: Any) -> None:
         """Tests full_url with non-sqlite backend.
 
         Args:
@@ -944,7 +1090,7 @@ class DatabaseTestSuite(BaseReducibleTestSuite):
         test_object.url = "localhost/db"
         assert test_object.full_url == "postgresql://localhost/db"
 
-    def test_async_full_url_non_sqlite(self, test_object: Database) -> None:
+    def test_async_full_url_non_sqlite(self, test_object: Any) -> None:
         """Tests async_full_url with non-sqlite backend.
 
         Args:
