@@ -51,10 +51,7 @@ intersphinx_mapping = {
 }
 
 # HTML output
-html_theme = "sphinx_rtd_theme"
-html_theme_options = {
-    "collapse_navigation": False,
-    "navigation_depth": 4,
-}
+html_theme = "furo"
+html_theme_options = {}
 
 todo_include_todos = True
